@@ -1,0 +1,6 @@
+numpy == 1.18.5
+typing_extensions == 3.7.4.3
+pylint==2.3.1
+matplotlib == 3.0.3
+ansitable == 0.9.5
+rshell == 0.0.28 # mpfshell or ampy might be better - but this works

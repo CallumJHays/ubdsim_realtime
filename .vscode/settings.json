@@ -1,0 +1,19 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "firmware/micropython/": true,
+    "firmware/esp-idf/": true,
+    "firmware/xtensa-esp32-elf/": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "firmware/micropython/lib/*": true
+  },
+  "python.pythonPath": "/home/cal/.conda/envs/ubdsim/bin/python"
+}

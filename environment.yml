@@ -1,0 +1,16 @@
+name: ubdsim
+
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - micropython = 1.13
+  - python = 3.6 # micropython 1.13 only (almost) fully supports 3.6
+  # it basically just ignores type-hints, and doesn't support f-strings
+  # and can't do async comprehensions (who uses those anyway?)
+  # see https://github.com/micropython/micropython/issues/1329
+  - pip = 20.03
+
+  - pip:
+      - -r file:requirements.txt

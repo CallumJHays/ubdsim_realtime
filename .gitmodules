@@ -1,0 +1,12 @@
+[submodule "firmware/micropython"]
+	path = firmware/micropython
+	url = https://github.com/micropython/micropython
+[submodule "firmware/esp-idf"]
+	path = firmware/esp-idf
+	url = https://github.com/espressif/esp-idf.git
+[submodule "firmware/ulab"]
+	path = firmware/ulab
+	url = https://github.com/v923z/micropython-ulab
+[submodule "ubdsim"]
+	path = ubdsim
+	url = git@github.com:petercorke/bdsim.git
