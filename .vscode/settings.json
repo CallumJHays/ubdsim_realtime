@@ -13,7 +13,25 @@
     "**/.hg": true,
     "**/CVS": true,
     "**/.DS_Store": true,
-    "firmware/micropython/lib/*": true
+    "firmware/esp-idf": true,
+    "firmware/micropython": true,
+    "firmware/xtensa-esp32-elf": true
   },
-  "python.pythonPath": "/home/cal/.conda/envs/ubdsim/bin/python"
+  "python.pythonPath": "/home/cal/.conda/envs/ubdsim/bin/python",
+  "python.linting.enabled": true,
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.autoComplete.extraPaths": [
+    ".micropy/esp32-1.13.0/frozen",
+    ".micropy/esp32-1.13.0/stubs",
+    ".micropy/ulab",
+    ".micropy/ubdsim"
+  ],
+  "python.analysis.extraPaths": [
+    ".micropy/esp32-1.13.0/frozen",
+    ".micropy/esp32-1.13.0/stubs",
+    ".micropy/ulab",
+    ".micropy/ubdsim"
+  ],
+  "python.linting.pylintEnabled": true
 }
