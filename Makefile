@@ -36,6 +36,7 @@ test: firmware/dist
 firmware/dist: $(wildcard ubdsim-realtime/**/*.py) $(wildcard ubdsim/**/*.py) _unix-base
 	# can't use these as dependencies - make has no dynamic dependency evaluation :(
 	# have to do it manually
+	set -e && \
 	for TARGET in $(addprefix firmware/bytecode/,$(UBDSIM_PY_SRC:.py=.mpy) $(UBDSIM_RT_PY_SRC:.py=.mpy)); \
 	do \
 		echo make -s $${TARGET}; \
