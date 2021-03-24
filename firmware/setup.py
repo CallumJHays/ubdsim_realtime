@@ -5,7 +5,7 @@ import sdist_upip
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(path.join(here, '..', 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
@@ -54,6 +54,6 @@ setup(
 
     license='MIT',
 
-    packages=['ubdsim', 'ubdsim-realtime'],
+    packages=find_packages('bytecode', exclude=['test_*']),
 
 )

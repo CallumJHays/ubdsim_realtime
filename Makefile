@@ -4,16 +4,16 @@ FWARE_DIR=$(shell pwd)/firmware
 export USER_C_MODULES=${FWARE_DIR}/ulab
 
 # unix port
-unix: firmware/mpy_sdist
+unix: firmware/dist
 	cd ${FWARE_DIR}/micropython/ports/unix && \
-		./micropython -m upip install -p modules ${FWARE_DIR}/mpy_sdist && \
+		./micropython -m upip install -p modules ${FWARE_DIR}/dist && \
 		make submodules && make deplibs && make all
 
 unix-repl: unix
 	${FWARE_DIR}/micropython/ports/unix/micropython
 
 # esp32 port
-esp32: firmware/mpy_sdist
+esp32: firmware/dist
 	cd ${FWARE_DIR}/micropython/ports/esp32 && \
 		\
 		export PATH=${FWARE_DIR}/xtensa-esp32-elf/bin:$$PATH && \
@@ -28,24 +28,28 @@ stubs:
 # all these source files must be mpy-cross-compiled into bytecode
 # and then frozen as c code so that the libraries are stored in ROM
 UBDSIM_PY_SRC=$(call _rwildcard,ubdsim,*.py)
-UBDSIM_RT_PY_SRC=$(call _rwildcard,ubdsim.realtime,*.py)
+UBDSIM_RT_PY_SRC=$(call _rwildcard,ubdsim-realtime,*.py)
 
-# all the bytecode from ubdsim and ubdsim.realtime
-firmware/mpy_sdist: _unix-base $(addprefix firmware/bytecode/,$(UBDSIM_PY_SRC:.py=.mpy) $(UBDSIM_RT_PY_SRC:.py=.mpy))
-	# micropython-lib is needed for distribution
-	PYTHONPATH=firmware/micropython-lib python setup.py sdist
-	# rename and move it for clarity
-	rm -rf firmware/mpy_sdist
-	mv dist firmware/mpy_sdist
+test: firmware/dist
+
+# all the bytecode from ubdsim and ubdsim-realtime
+firmware/dist: $(wildcard ubdsim-realtime/**/*.py) $(wildcard ubdsim/**/*.py) _unix-base
+	# can't use these as dependencies - make has no dynamic dependency evaluation :(
+	# have to do it manually
+	for TARGET in $(addprefix firmware/bytecode/,$(UBDSIM_PY_SRC:.py=.mpy) $(UBDSIM_RT_PY_SRC:.py=.mpy)); \
+	do \
+		echo make -s $${TARGET}; \
+		make -s $${TARGET}; \
+	done
 
 # cross-compiled micropython bytecode
 # foor any targets with `ubdsim/*`, retarget to `ubdsim/bdsim/*`
-firmware/bytecode/%.mpy: %.py _mpy-cross
+firmware/bytecode/%.mpy: %.py
 	${FWARE_DIR}/micropython/mpy-cross/mpy-cross $< -o $@
 
 # cross-compiler
 _mpy-cross:
-	make -C ${FWARE_DIR}/micropython/mpy-cross USER_C_MODULES=${USER_C_MODULES}
+	make -C ${FWARE_DIR}/micropython/mpy-cross
 
 # an initial build is required to call `micropython -m pip` which is needed to freeze the package
 _unix-base: _mpy-cross
