@@ -19,6 +19,10 @@
     "firmware/xtensa-esp32-elf": true,
     "firmware/micropython-lib": true
   },
+  // don't autoformat in order to stay as close to peter's codebase as possible to make maintenance easier.
+  "[python]": {
+    "editor.formatOnSave": false
+  },
   "python.pythonPath": "/home/cal/.conda/envs/ubdsim/bin/python",
   "python.linting.enabled": true,
   "python.languageServer": "Pylance",

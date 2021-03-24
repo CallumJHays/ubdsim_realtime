@@ -30,8 +30,6 @@ stubs:
 UBDSIM_PY_SRC=$(call _rwildcard,ubdsim,*.py)
 UBDSIM_RT_PY_SRC=$(call _rwildcard,ubdsim-realtime,*.py)
 
-test: firmware/dist
-
 # all the bytecode from ubdsim and ubdsim-realtime
 firmware/dist: $(wildcard ubdsim-realtime/**/*.py) $(wildcard ubdsim/**/*.py) _unix-base
 	# can't use these as dependencies - make has no dynamic dependency evaluation :(
