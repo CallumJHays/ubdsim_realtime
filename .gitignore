@@ -1,3 +1,6 @@
+# mpy dist pkg renamed for clarity
+firmware/mpy_sdist
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

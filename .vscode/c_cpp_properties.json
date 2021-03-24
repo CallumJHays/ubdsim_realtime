@@ -1,0 +1,60 @@
+{
+  "configurations": [
+    // {
+    //   "name": "ESP32 Firmware",
+    //   "intelliSenseMode": "gcc-arm",
+    //   "includePath": [
+    //     // "${workspaceFolder}/../micropython/",
+    //     // "${workspaceFolder}/../micropython/mpy-cross/build/",
+    //     // "${workspaceFolder}/../micropython/ports/esp32/",
+    //     // "${workspaceFolder}/../micropython/ports/esp32/boards/GENERIC/",
+    //     // "${workspaceFolder}/../esp-idf/components/**",
+    //     // "${workspaceFolder}/../xtensa-esp32-elf/include",
+    //     "${workspaceFolder}/code"
+    //   ],
+    //   "compilerPath": "${workspaceFolder}/../xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc",
+    //   "cStandard": "c11",
+    //   "browse": {
+    //     "path": ["${workspaceFolder}/code"],
+    //     "limitSymbolsToIncludedHeaders": true
+    //   }
+    // },
+    {
+      "name": "Unix Micropython",
+      "intelliSenseMode": "gcc-arm",
+      "includePath": [
+        "${workspaceFolder}/firmware/micropython/",
+        "${workspaceFolder}/firmware/micropython/mpy-cross/build/",
+        "${workspaceFolder}/firmware/micropython/ports/unix/",
+        "${workspaceFolder}/firmware/micropython/ports/unix/variants/standard/",
+        "${workspaceFolder}/firmware/ulab/code"
+      ],
+      "compilerPath": "gcc",
+      "cStandard": "c11",
+      "browse": {
+        "path": ["${workspaceFolder}/firmware/ulab/code"],
+        "limitSymbolsToIncludedHeaders": true
+      }
+    }
+    // {
+    //   "name": "Unix CircuitPython",
+    //   "intelliSenseMode": "gcc-arm",
+    //   "includePath": [
+    //     "${workspaceFolder}/circuitpython/",
+    //     "${workspaceFolder}/circuitpython/mpy-cross/build/",
+    //     "${workspaceFolder}/circuitpython/ports/unix/",
+    //     // "${workspaceFolder}/circuitpython/ports/esp32/boards/GENERIC/",
+    //     // "${workspaceFolder}/esp-idf/components/**",
+    //     // "${workspaceFolder}/../xtensa-esp32-elf/include",
+    //     "${workspaceFolder}/code"
+    //   ],
+    //   "compilerPath": "${workspaceFolder}/../xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc",
+    //   "cStandard": "c11",
+    //   "browse": {
+    //     "path": ["${workspaceFolder}/code"],
+    //     "limitSymbolsToIncludedHeaders": true
+    //   }
+    // }
+  ],
+  "version": 4
+}

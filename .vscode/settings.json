@@ -3,9 +3,10 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "**/node_modules/**": true,
-    "firmware/micropython/": true,
+    // "firmware/micropython/": true,
     "firmware/esp-idf/": true,
-    "firmware/xtensa-esp32-elf/": true
+    "firmware/xtensa-esp32-elf/": true,
+    "firmware/micropython-lib": true
   },
   "files.exclude": {
     "**/.git": true,
@@ -14,8 +15,9 @@
     "**/CVS": true,
     "**/.DS_Store": true,
     "firmware/esp-idf": true,
-    "firmware/micropython": true,
-    "firmware/xtensa-esp32-elf": true
+    // "firmware/micropython": true,
+    "firmware/xtensa-esp32-elf": true,
+    "firmware/micropython-lib": true
   },
   "python.pythonPath": "/home/cal/.conda/envs/ubdsim/bin/python",
   "python.linting.enabled": true,
