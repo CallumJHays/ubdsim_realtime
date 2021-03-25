@@ -11,18 +11,9 @@ make=make -j${NPROC:}
 # unix port
 unix:
 	cd ${micropython_dir}/ports/unix && \
-		\
-		$(make) clean-frozen && \
-		rm -rf modules && \
-		mkdir -p modules && \
-		./micropython -m upip install -p modules picoweb && \
-		cp -r ${root}/ubdsim modules/ && \
-		cp -r ${root}/ubdsim_realtime modules/ && \
-		\
-		$(make) clean && \
 		$(make) submodules && \
 		$(make) deplibs && \
-		$(make) all FROZEN_MPY_DIR=modules
+		$(make) all FROZEN_MANIFEST=${root}/frozen_manifest.py
 
 micropython=${micropython_dir}/ports/unix/micropython
 
@@ -79,7 +70,7 @@ firmware/bytecode/%.mpy: %.py
 	mkdir -p $$(dirname $@)
 	# do the cross-compilation
 	set -e && \
-		${micropython_dir}/mpy-cross/mpy-cross -o $@ $<
+		${micropython_dir}/mpy-cross/mpy-cross -O 3 -o $@ $<
 
 # cross-compiler - this handle's qstr generation for c modules too
 _mpy-cross:
