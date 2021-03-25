@@ -6,7 +6,9 @@
     // "firmware/micropython/": true,
     "firmware/esp-idf/": true,
     "firmware/xtensa-esp32-elf/": true,
-    "firmware/micropython-lib": true
+    "firmware/micropython-lib": true,
+    ".micropy": true,
+    "bdsim": true
   },
   "files.exclude": {
     "**/.git": true,
@@ -17,7 +19,9 @@
     "firmware/esp-idf": true,
     // "firmware/micropython": true,
     "firmware/xtensa-esp32-elf": true,
-    "firmware/micropython-lib": true
+    "firmware/micropython-lib": true,
+    ".micropy": true,
+    "bdsim": true
   },
   // don't autoformat in order to stay as close to peter's codebase as possible to make maintenance easier.
   "[python]": {

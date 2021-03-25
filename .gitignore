@@ -1,5 +1,6 @@
-# mpy dist pkg renamed for clarity
-firmware/mpy_sdist
+# build artifacts
+firmware/bytecode
+!firmware/bytecode/setup.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

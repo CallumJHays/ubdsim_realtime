@@ -10,6 +10,3 @@
 [submodule "ubdsim"]
 	path = ubdsim
 	url = git@github.com:petercorke/bdsim.git
-[submodule "firmware/micropython-lib"]
-	path = firmware/micropython-lib
-	url = git@github.com:micropython/micropython-lib.git
