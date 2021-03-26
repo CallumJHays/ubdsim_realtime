@@ -7,6 +7,6 @@
 [submodule "firmware/ulab"]
 	path = firmware/ulab
 	url = https://github.com/v923z/micropython-ulab
-[submodule "ubdsim"]
-	path = ubdsim
+[submodule "bdsim"]
+	path = bdsim
 	url = git@github.com:petercorke/bdsim.git

@@ -1,6 +1,9 @@
 # build artifacts
-firmware/bytecode
+firmware/bytecode/*
 !firmware/bytecode/setup.py
+!firmware/bytecode/sdist_upip.py
+# downloaded compilers etc (from esp-idf/install.sh)
+firmware/idf-tools
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,21 +1,41 @@
-root=$(shell pwd)
-micropython_dir=${root}/firmware/micropython
+
+here = $(shell pwd)
 
 # include ulab in firmware
-export USER_C_MODULES=${root}/firmware/ulab
-
+SHELL := /bin/bash
+export USER_C_MODULES := ${here}/firmware/ulab
+# include ubdsim as a frozen module for all builds
+export FROZEN_MANIFEST := ${here}/frozen_manifest.py
 # build with multiple cores
-NPROC:=$(shell python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')
-make=make -j${NPROC:}
+NPROC := $(shell python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')
+
+make = make -j${NPROC:}
+micropython_dir = ${here}/firmware/micropython
+
+general: init unix stubs
+
+init:
+	git submodule update --init
+	cd firmware/ulab && \
+		git submodule update --init --recursive
+
+stubs:
+	python3 extract_stubs_ulab.py firmware/ulab/code .micropy/ulab/ulab
 
 # unix port
-unix:
+unix: _qstr-defs
 	cd ${micropython_dir}/ports/unix && \
 		$(make) submodules && \
 		$(make) deplibs && \
-		$(make) all FROZEN_MANIFEST=${root}/frozen_manifest.py
+		$(make) all
 
 micropython=${micropython_dir}/ports/unix/micropython
+
+unix-fresh:
+	cd ${micropython_dir}/ports/unix && \
+		$(make) clean && \
+		$(make) clean-frozen
+	$(make) unix
 
 unix-repl: unix
 	$(micropython)
@@ -24,22 +44,34 @@ unix-test: unix
 	$(micropython) test_ubdsim.py
 
 # esp32 port
-esp32:
+esp32: _qstr-defs
+	cd ${here}/firmware/esp-idf && \
+		git submodule update --init --recursive && \
+		export IDF_PATH=$$(pwd) && \
+		export IDF_TOOLS_PATH=${here}/firmware/idf-tools && \
+		\
+		./install.sh && \
+		. ./export.sh && \
+		\
+		cd ${micropython_dir}/ports/esp32 && \
+			export BOARD=GENERIC && \
+			\
+			$(make) submodules && \
+			$(make) all
+
+esp32-fresh:
 	cd ${micropython_dir}/ports/esp32 && \
-		\
-		export PATH=${root}/firmware/xtensa-esp32-elf/bin:$$PATH && \
-		export ESPIDF=${root}/firmware/esp-idf && \
-		export BOARD=GENERIC && \
-		\
+		rm -rf ${micropython_dir}/ports/esp32/build-GENERIC && \
 		$(make) clean && \
-		$(make) submodules && \
-		$(make) all
+		$(make) erase
+	$(make) esp32
 
-esp32-repl:
+esp32-deploy: esp32
+	cd ${micropython_dir}/ports/esp32 && \
+		$(make) deploy
+
+esp32-repl: esp32-deploy
 	rshell -p /dev/ttyUSB0 cd /pyboard; repl
-
-stubs:
-	python extract_pyi.py ${root}/firmware/ulab/code .micropy/ulab
 
 
 # all these source files must be mpy-cross-compiled into bytecode
@@ -48,7 +80,7 @@ UBDSIM_PY_SRC=$(call _rwildcard,ubdsim,*.py)
 UBDSIM_RT_PY_SRC=$(call _rwildcard,ubdsim_realtime,*.py)
 
 # all the bytecode from ubdsim and ubdsim_realtime
-dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _unix-base
+dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _mpy-cross
 	# can't use these as proper dependencies - make has no dynamic dependency evaluation :(
 	# have to do it manually
 	set -e && \
@@ -64,7 +96,8 @@ dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _unix-base
 		python3 setup.py sdist
 
 # cross-compiled micropython bytecode
-# foor any targets with `ubdsim/*`, retarget to `ubdsim/bdsim/*`
+# for any targets with `ubdsim/*`, retarget to `ubdsim/bdsim/*`
+# should really depend on 'mpy-cross', and kinda does as long as this is only made from the above for loop
 firmware/bytecode/%.mpy: %.py
 	# target directory must exist or it fails silently
 	mkdir -p $$(dirname $@)
@@ -72,14 +105,11 @@ firmware/bytecode/%.mpy: %.py
 	set -e && \
 		${micropython_dir}/mpy-cross/mpy-cross -O 3 -o $@ $<
 
-# cross-compiler - this handle's qstr generation for c modules too
-_mpy-cross:
-	$(make) -C ${micropython_dir}/mpy-cross
+_qstr-defs: _mpy-cross # alias for clarity
 
-# an initial build is required to call `micropython -m pip` which is needed to freeze the package
-_unix-base: _mpy-cross
-	cd ${micropython_dir}/ports/unix && \
-		$(make) submodules && $(make) deplibs && $(make) all
+_mpy-cross:
+	# ensures mpy-cross is updated with the latest QSTR definitions from USER_C_MODULES
+	$(make) V=1 -C ${micropython_dir}/mpy-cross
 
 # function to recursively list files matching glob pattern.
 # https://stackoverflow.com/a/18258352/1266662

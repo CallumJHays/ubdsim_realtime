@@ -25,7 +25,7 @@ Micropython port of Peter Corke's bdsim - realtime only (no simulation).
 Clone the repo, then; -
 
 ```bash
-# init all submodule dependencies
+# git clone all submodule dependencies
 git submodule update --init --recursive
 ```
 
