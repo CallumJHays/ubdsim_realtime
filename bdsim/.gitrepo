@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/petercorke/bdsim
+	branch = master
+	commit = 206e8423b878869e6cce8204cd1701c32bb2f239
+	parent = a61f2ffcf9519efe037a7d176362e197e7087f5e
+	method = merge
+	cmdver = 0.4.3
