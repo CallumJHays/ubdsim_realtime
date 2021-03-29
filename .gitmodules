@@ -4,9 +4,3 @@
 [submodule "firmware/esp-idf"]
 	path = firmware/esp-idf
 	url = https://github.com/espressif/esp-idf.git
-[submodule "firmware/ulab"]
-	path = firmware/ulab
-	url = https://github.com/v923z/micropython-ulab
-[submodule "bdsim"]
-	path = bdsim
-	url = git@github.com:petercorke/bdsim.git
