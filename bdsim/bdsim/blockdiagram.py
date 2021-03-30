@@ -191,9 +191,9 @@ class BlockDiagram:
         # check that wires all point to valid blocks
         for w in self.wirelist:
             if w.start.block not in self.blocklist:
-                raise RuntimeError(f"wire {w} starts at unreferenced block {w.start.block}")
+                raise RuntimeError("wire {w} starts at unreferenced block {}".format(w.start.block))
             if w.end.block not in self.blocklist:
-                raise RuntimeError(f"wire {w} ends at unreferenced block {w.end.block}")
+                raise RuntimeError("wire {w} ends at unreferenced block {}".format(w.end.block))
 
         # run block specific checks
         for b in self.blocklist:
@@ -423,7 +423,7 @@ class BlockDiagram:
 
         self.t_stop = None
         while True:
-            cmd = input(f"(bdsim, t={self.t:.4f}) ")
+            cmd = input("(bdsim, t={:.4f}) ".format(self.t))
 
             if len(cmd) == 0:
                 continue
@@ -596,8 +596,8 @@ class BlockDiagram:
         import traceback
 
         print(fg('red'))
-        print(f"[{where}]: exception {err[0].__name__} occurred in {block.type} block {block.name}  ")
-        print(f">>>> {err[1]}\n")
+        print("[{}]: exception {} occurred in {} block {}  ".format(where, err[0].__name__, block.type, block.name))
+        print(">>>> {}\n".format(err[1]))
         traceback.print_tb(err[2])
         print(attr(0))
         raise RuntimeError('Fatal failure')

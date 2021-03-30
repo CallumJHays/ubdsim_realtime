@@ -356,10 +356,10 @@ class Clock:
         self.blocklist.append(block)
 
     def __str__(self):
-        s = f"{self.name}: T={self.T} sec"
+        s = "{}: T={} sec".format(self.name, self.T)
         if self.offset != 0:
-            s += f", offset={self.offset}"
-        s += f", clocking {len(self.blocklist)} blocks"
+            s += ", offset={}".format(self.offset)
+        s += ", clocking {} blocks".format(len(self.blocklist))
         return s
 
     def getstate0(self):
