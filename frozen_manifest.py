@@ -4,3 +4,5 @@
 
 freeze_as_mpy('ubdsim', opt=3)
 freeze_as_mpy('ubdsim_realtime', opt=3)
+freeze_as_mpy("firmware/micropython/tools", ("upip.py", "upip_utarfile.py"), opt=3)
+freeze_as_mpy(".upip-deps", opt=3)

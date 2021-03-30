@@ -1,24 +1,7 @@
-import os
-from pathlib import Path
-import sys
-import importlib
-import inspect
-from collections import Counter, namedtuple
-from typing import NamedTuple
-import argparse
-import types
-from bdsim.components import *
-from bdsim.blockdiagram import BlockDiagram
+from collections import namedtuple
+from .components import *
+from .blockdiagram import BlockDiagram
 import copy
-import tempfile
-import subprocess
-import webbrowser
-
-import numpy as np
-import bdsim
-import scipy.integrate as integrate
-import re
-from colored import fg, attr
 
 
 block = namedtuple('block', 'name, cls, path')
@@ -198,23 +181,6 @@ class BDSim:
             'progress': True,
             'debug': ''
             }
-        if sysargs:
-            # command line arguments and graphics
-            parser = argparse.ArgumentParser()
-            parser.add_argument('--backend', '-b', type=str, metavar='BACKEND', default=defaults['backend'],
-                                help='matplotlib backend to choose')
-            parser.add_argument('--tiles', '-t', type=str, default=defaults['tiles'], metavar='ROWSxCOLS',
-                                help='window tiling as NxM')
-            parser.add_argument('--nographics', '-g', default=defaults['graphics'], action='store_const', const=False, dest='graphics',
-                                help='disable graphic display')
-            parser.add_argument('--animation', '-a', default=defaults['animation'], action='store_const', const=True,
-                                help='animate graphics')
-            parser.add_argument('--noprogress', '-p', default=defaults['progress'], action='store_const', const=False, dest='progress',
-                        help='animate graphics')
-            parser.add_argument('--debug', '-d', type=str, metavar='[psd]', default=defaults['debug'], 
-                                help='debug flags')
-            clargs = vars(parser.parse_args())  # get args as a dictionary
-            # print(f'clargs {clargs}')
 
             
         # function arguments override the command line options
@@ -225,21 +191,12 @@ class BDSim:
                 # first priority is to constructor argument
                 assert type(kwargs[option]) is type(default), 'passed argument ' + option + ' has wrong type'
                 options[option] = kwargs[option]
-            elif sysargs and option in clargs:
-                # if not provided, drop through to command line argument
-                options[option] = clargs[option]
             else:
                 # drop through to the default value
                 options[option] = default
-            
-        # ensure graphics is enabled if animation is requested
-        if options['animation']:
-            options['graphics'] = True
         
         # stash these away
-        opts = defaults.copy()
-        opts.update(options)
-        options = types.SimpleNamespace(**opts)
+        options = defaults.copy().update(options)
 
         # setup debug parameters from single character codes
         debuglist = []

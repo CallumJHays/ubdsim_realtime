@@ -5,19 +5,17 @@ Created on Mon May 18 21:43:18 2020
 
 @author: corkep
 """
-import os
-from pathlib import Path
-import sys
-import importlib
-import inspect
-from collections import Counter, namedtuple
-import numpy as np
 from colored import fg, attr
-
-
 from ansitable import ANSITable, Column
 
-from bdsim.components import *
+import typing
+if 'TYPE_CHECKING' in dir(typing) and typing.TYPE_CHECKING:
+    import ulab as np
+else:
+    from ulab import numpy as np
+
+from .r_ import r_
+from .components import *
 
 
 def isdebug(debug):
@@ -42,7 +40,7 @@ class BlockDiagram:
     :ivar compiled: diagram has successfully compiled
     :vartype compiled: bool
     :ivar blockcounter: unique counter for each block type
-    :vartype blockcounter: collections.Counter
+    :vartype blockcounter: Dict[str, int]
     :ivar blockdict: index of all blocks by category
     :vartype blockdict: dict of lists
     :ivar name: name of this diagram
@@ -56,7 +54,7 @@ class BlockDiagram:
         self.blocklist = []     # list of all blocks
         self.clocklist = []     # list of all clock sources
         self.compiled = False   # network has been compiled
-        self.blockcounter = Counter()
+        self.blockcounter = {}
         self.name = name
         self.nstates = 0
         self.ndstates = 0
@@ -74,8 +72,8 @@ class BlockDiagram:
     def add_block(self, block):
         block.id = len(self.blocklist)
         if block.name is None:
-            i = self.blockcounter[block.type]
-            self.blockcounter[block.type] += 1
+            i = self.blockcounter.get(block.type, 0)
+            self.blockcounter[block.type] = i + 1
             block.name = "{:s}.{:d}".format(block.type, i)
         block.bd = self
         self.blocklist.append(block)  # add to the list of available blocks

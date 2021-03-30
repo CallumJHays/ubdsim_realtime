@@ -5,14 +5,15 @@ Components of the simulation system, namely blocks, wires and plugs.
 """
 
 import math
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import animation
-from collections import UserDict
+import typing
+if 'TYPE_CHECKING' in dir(typing) and typing.TYPE_CHECKING:
+    import ulab as np
+else:
+    from ulab import numpy as np
 
-from collections import UserDict
+from .r_ import r_
 
-class Struct(UserDict):
+class Struct(dict):
     """
     A dict like object that allows items to be added by attribute or by key.
     
@@ -366,7 +367,7 @@ class Clock:
         # get the state from each stateful block on this clock
         x0 = np.array([])
         for b in self.blocklist:
-            x0 = np.r_[x0, b.getstate0()]
+            x0 = r_[x0, b.getstate0()]
             #print('x0', x0)
         return x0
 
@@ -376,7 +377,7 @@ class Clock:
         for b in self.blocklist:
             # update dstate
             assert b.updated, 'clocked block has incomplete inputs'
-            x = np.r_[x, b.next().flatten()]
+            x = r_[x, b.next().flatten()]
 
         return x
 
@@ -479,8 +480,6 @@ class Block:
         block.nstates = 0
         block.ndstates = 0
         return block
-
-    _latex_remove = str.maketrans({'$':'', '\\':'', '{':'', '}':'', '^':'', '_':''})
 
     def __init__(self, name=None, inames=None, onames=None, snames=None, pos=None, nin=None, nout=None, inputs=None, bd=None, **kwargs):
 
@@ -700,7 +699,9 @@ class Block:
         return self.__str__()
 
     def _fixname(self, s):
-        return s.translate(self._latex_remove)
+        for frm, to in {'$':'', '\\':'', '{':'', '}':'', '^':'', '_':''}.items():
+            s = s.replace(frm, to)
+        return s
 
     def inport_names(self, names):
         """

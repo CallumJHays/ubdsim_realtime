@@ -5,7 +5,7 @@ channels:
   - conda-forge
 
 dependencies:
-  - micropython = 1.13
+  - micropython = 1.13 # mainly for installing packages with upip
   - python = 3.6 # micropython 1.13 only (almost) fully supports 3.6
   # it basically just ignores type-hints, and doesn't support f-strings
   # and can't do async comprehensions (who uses those anyway?)
@@ -13,4 +13,4 @@ dependencies:
   - pip = 20.03
 
   - pip:
-      - -r file:requirements.txt
+      - -r file:dev-requirements.txt

@@ -1,0 +1,5 @@
+# upip doesn't support specifying versions (yet).
+# Therefore the latest version is always installed.
+pycopy-typing
+micropython-future
+ansitable
