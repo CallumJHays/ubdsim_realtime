@@ -41,7 +41,9 @@ unix-repl: unix
 	$(micropython)
 
 unix-test: unix
-	$(micropython) test_ubdsim.py
+	# MICROPYPATH="" fixes a weird import issue
+	# https://github.com/micropython/micropython/issues/2322#issuecomment-277845841
+	MICROPYPATH="" $(micropython) test_ubdsim.py
 
 # esp32 port
 esp32: _qstr-defs .upip-deps
@@ -96,7 +98,6 @@ dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _mpy-cross
 		python3 setup.py sdist
 
 .upip-deps: mpy-requirements.txt
-	rm -rf .upip-deps
 	# use micropython installed with conda
 	micropython -m upip install -p .upip-deps -r mpy-requirements.txt
 	# some packages install other needless files. Freezing these will require a little more work

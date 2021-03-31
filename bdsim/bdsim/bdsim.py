@@ -1,7 +1,6 @@
 from collections import namedtuple
 from .components import *
 from .blockdiagram import BlockDiagram
-import copy
 
 
 block = namedtuple('block', 'name, cls, path')
@@ -166,7 +165,7 @@ class BDSim:
             #     self.blockdict[blocktype] = [block.name]
 
         # add a clone of the options
-        bd.options = copy.copy(self.options)
+        bd.options = self.options.copy()
 
         return bd
 

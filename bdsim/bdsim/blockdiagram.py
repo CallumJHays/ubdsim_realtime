@@ -5,7 +5,7 @@ Created on Mon May 18 21:43:18 2020
 
 @author: corkep
 """
-from colored import fg, attr
+import colored
 from ansitable import ANSITable, Column
 
 import typing
@@ -593,11 +593,11 @@ class BlockDiagram:
 
         import traceback
 
-        print(fg('red'))
+        print(colored.fg('red'))
         print("[{}]: exception {} occurred in {} block {}  ".format(where, err[0].__name__, block.type, block.name))
         print(">>>> {}\n".format(err[1]))
         traceback.print_tb(err[2])
-        print(attr(0))
+        print(colored.attr(0))
         raise RuntimeError('Fatal failure')
 
     def getstate0(self):
