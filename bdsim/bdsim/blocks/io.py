@@ -8,7 +8,7 @@ Define real-time i/o blocks for use in block diagrams.  These are blocks that:
 """
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
-from bdsim.components import SinkBlock, SourceBlock, block
+from ..components import SinkBlock, SourceBlock, block
 
 """
 could have if/else chain here to define these classes according to the platform

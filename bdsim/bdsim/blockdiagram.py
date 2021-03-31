@@ -9,9 +9,8 @@ import colored
 from ansitable import ANSITable, Column
 
 import numpy as np
-
 from .components import *
-
+from . import blocks as _blocks
 
 def isdebug(debug):
     # nonlocal debuglist

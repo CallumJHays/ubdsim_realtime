@@ -11,13 +11,9 @@ Transfer blocks:
 
 import numpy as np
 import math
-from math import sin, cos, atan2, sqrt, pi
-
-import matplotlib.pyplot as plt
-import inspect
 from spatialmath import base
 
-from bdsim.components import TransferBlock, block
+from ..components import TransferBlock, block
 
 # ------------------------------------------------------------------------ #
 

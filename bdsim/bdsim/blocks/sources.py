@@ -12,7 +12,7 @@ Source blocks:
 import numpy as np
 import math
 
-from bdsim.components import SourceBlock, block
+from ..components import SourceBlock, block
 
 
 # ------------------------------------------------------------------------ #

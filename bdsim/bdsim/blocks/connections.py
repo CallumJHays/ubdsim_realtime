@@ -19,9 +19,8 @@ import importlib.util
 import numpy as np
 import copy
 
-
-import bdsim
-from bdsim.components import SubsystemBlock, SourceBlock, SinkBlock, FunctionBlock, block
+from ..blockdiagram import BlockDiagram
+from ..components import SubsystemBlock, SourceBlock, SinkBlock, FunctionBlock, block
 
 # ------------------------------------------------------------------------ #
 @block
@@ -244,7 +243,7 @@ class SubSystem(SubsystemBlock):
                 raise ImportError('multiple bdsim.Simulation instances in imported module' + str(simvars))
             subsys = module.__dict__[simvars[0]]
             self.ssvar = simvars[0]
-        elif isinstance(subsys, bdsim.BlockDiagram):
+        elif isinstance(subsys, BlockDiagram):
             # use an in-memory digram
             self.ssvar = None
         else:

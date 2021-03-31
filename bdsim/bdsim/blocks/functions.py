@@ -10,10 +10,9 @@ Function blocks:
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
 import numpy as np
-import scipy.interpolate
 import math
 
-from bdsim.components import FunctionBlock, block
+from ..components import FunctionBlock, block
 
 
 # PID
@@ -240,13 +239,13 @@ class Clip(FunctionBlock):
        +------------+---------+---------+
 
     """
-    def __init__(self, *inputs, min=-math.inf, max=math.inf, **kwargs):
+    def __init__(self, *inputs, min=-float('inf'), max=float('inf'), **kwargs):
         """
         :param ``*inputs``: Optional incoming connections
         :type ``*inputs``: Block or Plug
-        :param min: Minimum value, defaults to -math.inf
+        :param min: Minimum value, defaults to -float('inf')
         :type min: float or array_like, optional
-        :param max: Maximum value, defaults to math.inf
+        :param max: Maximum value, defaults to float('inf')
         :type max: float or array_like, optional
         :param ``**kwargs``: common Block options
         :return: A CLIP block
@@ -497,6 +496,10 @@ class Interpolate(FunctionBlock):
             elif isinstance(xy, np.ndarray):
                 x = xy[:,0]
                 y = xy[:,1:]
+        assert kind == 'linear', \
+            "only linear interpolation is currently supported. If you need this, please contribute to ubdsim on github!"
+        self.f = lambda n: \
+            np.interp(n, x, y)
         self.f = scipy.interpolate.interp1d(x=x, y=y, kind=kind, axis=0)
         self.x = x
                 
