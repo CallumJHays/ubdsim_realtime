@@ -23,7 +23,7 @@ stubs:
 	python3 extract_stubs_ulab.py firmware/ulab/code .micropy/ulab/ulab
 
 # unix port
-unix: _qstr-defs .upip-deps
+unix: _qstr-defs
 	cd ${micropython_dir}/ports/unix && \
 		$(make) submodules && \
 		$(make) deplibs && \
@@ -46,7 +46,7 @@ unix-test: unix
 	MICROPYPATH="" $(micropython) test_ubdsim.py
 
 # esp32 port
-esp32: _qstr-defs .upip-deps
+esp32: _qstr-defs
 	cd ${here}/firmware/esp-idf && \
 		git submodule update --init --recursive && \
 		export IDF_PATH=$$(pwd) && \
@@ -96,17 +96,6 @@ dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _mpy-cross
 	
 	cd firmware/bytecode && \
 		python3 setup.py sdist
-
-.upip-deps: mpy-requirements.txt
-	# use micropython installed with conda
-	micropython -m upip install -p .upip-deps -r mpy-requirements.txt
-	# some packages install other needless files. Freezing these will require a little more work
-	# and may be unnecessary. For now just remove them.
-	find .upip-deps -type f ! -name "*.py" -delete
-	# remove tests
-	find .upip-deps -type f -name "test_*.py" -delete
-	# also remove any leftover empty directories for the hell of it
-	find .upip-deps -type d -empty -delete
 
 # cross-compiled micropython bytecode
 # for any targets with `ubdsim/*`, retarget to `ubdsim/bdsim/*`

@@ -5,13 +5,7 @@ Components of the simulation system, namely blocks, wires and plugs.
 """
 
 import math
-import typing
-if 'TYPE_CHECKING' in dir(typing) and typing.TYPE_CHECKING:
-    import ulab as np
-else:
-    from ulab import numpy as np
-
-from .r_ import r_
+import numpy as np
 
 class Struct(dict):
     """
@@ -367,7 +361,7 @@ class Clock:
         # get the state from each stateful block on this clock
         x0 = np.array([])
         for b in self.blocklist:
-            x0 = r_[x0, b.getstate0()]
+            x0 = np.r_[x0, b.getstate0()]
             #print('x0', x0)
         return x0
 
@@ -377,7 +371,7 @@ class Clock:
         for b in self.blocklist:
             # update dstate
             assert b.updated, 'clocked block has incomplete inputs'
-            x = r_[x, b.next().flatten()]
+            x = np.r_[x, b.next().flatten()]
 
         return x
 
