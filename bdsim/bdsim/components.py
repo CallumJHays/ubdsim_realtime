@@ -513,7 +513,6 @@ class Block:
 
         if len(kwargs) > 0:
             print('WARNING: unused arguments', kwargs.keys())
-        print("init done")
 
     @property
     def info(self):
