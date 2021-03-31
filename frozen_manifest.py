@@ -10,9 +10,7 @@ srcfiles = [
     for filename in filenames
     if "test_" not in filename
 ]
-
-print("SRCFILES", srcfiles)
-
 freeze_as_mpy('src', srcfiles, opt=3)
+
 freeze_as_mpy("firmware/micropython/tools", ("upip.py", "upip_utarfile.py"), opt=3)
 freeze_as_mpy(".upip-deps", opt=3)

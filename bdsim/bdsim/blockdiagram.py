@@ -7,8 +7,9 @@ Created on Mon May 18 21:43:18 2020
 """
 import colored
 from ansitable import ANSITable, Column
-
 import numpy as np
+from typing import Type, cast
+
 from .components import *
 from . import blocks as _blocks
 
@@ -53,8 +54,14 @@ class BlockDiagram:
         self.nstates = 0
         self.ndstates = 0
 
-
         self.options = None
+        
+        # map the block classes that have been loaded up
+        # from their ALLCAPS name to their class object
+        self.block_classes = {
+            block_cls.__name__.upper(): block_cls
+            for block_cls in blocklist
+        }
         
 
     
@@ -71,11 +78,34 @@ class BlockDiagram:
             block.name = "{:s}.{:d}".format(block.type, i)
         block.bd = self
         self.blocklist.append(block)  # add to the list of available blocks
-        
+
     def add_wire(self, wire, name=None):
         wire.id = len(self.wirelist)
         wire.name = name
         return self.wirelist.append(wire)
+    
+    def __getattr__(self, name: str) -> Type[Block]:
+        assert name == name.upper(), "Block name must be in ALLCAPS"
+
+        try:
+            cls = self.block_classes[name]
+            def init_wrapper(*args, **kwargs):
+                return cls(*args, bd=self, **kwargs)
+
+            return cast(Type[Block], init_wrapper)
+
+        except:
+            closest_3_blocknames = sorted(
+                self.block_classes.keys(),
+                key=lambda blockname: _levenshtein_distance(name, blockname)
+            )[:3]
+            
+            raise Exception(
+                'Could not find a block by the name "{}".\n'
+                'Please check your spelling. The most similar block names are: {}.\n'
+                'If none of those look correct, check that your block library has been correctly imported.'
+                .format(name, closest_3_blocknames)
+            )
     
     def __str__(self):
         return 'BlockDiagram: {:s}'.format(self.name)
@@ -748,5 +778,38 @@ class BlockDiagram:
             print('  outputs: ', b.output(t=0))
 
     def DEBUG(self, debug, *args):
-        if debug in self.options.debuglist:
+        if self.options and debug in self.options.debuglist:
             print('DEBUG.{:s}: '.format(debug), *args)
+
+
+# ripped from https://blog.paperspace.com/implementing-levenshtein-distance-word-autocomplete-autocorrect/
+def _levenshtein_distance(token1: str, token2: str):
+    distances = np.zeros((len(token1) + 1, len(token2) + 1))
+
+    for t1 in range(len(token1) + 1):
+        distances[t1][0] = t1
+
+    for t2 in range(len(token2) + 1):
+        distances[0][t2] = t2
+        
+    a = 0
+    b = 0
+    c = 0
+    
+    for t1 in range(1, len(token1) + 1):
+        for t2 in range(1, len(token2) + 1):
+            if (token1[t1-1] == token2[t2-1]):
+                distances[t1][t2] = distances[t1 - 1][t2 - 1]
+            else:
+                a = distances[t1][t2 - 1]
+                b = distances[t1 - 1][t2]
+                c = distances[t1 - 1][t2 - 1]
+                
+                if (a <= b and a <= c):
+                    distances[t1][t2] = a + 1
+                elif (b <= a and b <= c):
+                    distances[t1][t2] = b + 1
+                else:
+                    distances[t1][t2] = c + 1
+
+    return distances[len(token1)][len(token2)]

@@ -461,22 +461,21 @@ class Block:
         :return: new Block instance
         :rtype: Block instance
         """
-        # print('Block __new__', args,bd, kwargs)
         block = super(Block, cls).__new__(cls)  # create a new instance
 
         # we overload setattr, so need to know whether it is being passed a port
         # name.  Add this attribute now to allow proper operation.
-        block.__dict__['portnames'] = []  # must be first, see __setattr__
+        setattr(block, 'portnames', []) # must be first, see __setattr__
 
         block.bd = bd
         block.nin = 0
         block.nout = 0
         block.nstates = 0
         block.ndstates = 0
+
         return block
 
     def __init__(self, name=None, inames=None, onames=None, snames=None, pos=None, nin=None, nout=None, inputs=None, bd=None, **kwargs):
-
         # print('Block constructor, bd = ', bd)
         if name is not None:
             self.name_tex = name
@@ -514,6 +513,7 @@ class Block:
 
         if len(kwargs) > 0:
             print('WARNING: unused arguments', kwargs.keys())
+        print("init done")
 
     @property
     def info(self):
