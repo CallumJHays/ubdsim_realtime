@@ -6,6 +6,7 @@ firmware/bytecode/*
 firmware/idf-tools
 .upip-deps/*
 !.upip-deps/__init__.py
+firmware/.build-flags
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

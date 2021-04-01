@@ -6,6 +6,8 @@ SHELL := /bin/bash
 export USER_C_MODULES := ${here}/firmware/ulab
 # include ubdsim as a frozen module for all builds
 export FROZEN_MANIFEST := ${here}/frozen_manifest.py
+export ESPIDF := ${here}/firmware/esp-idf
+export PATH := ${here}/firmware/xtensa-esp32-elf/bin:${PATH}
 # build with multiple cores
 NPROC := $(shell python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')
 
@@ -47,16 +49,22 @@ unix-test: unix
 
 # esp32 port
 esp32: _qstr-defs
-	cd ${here}/firmware/esp-idf && \
+	cd ${ESPIDF} && \
+		git submodule sync --recursive && \
 		git submodule update --init --recursive && \
-		export IDF_PATH=$$(pwd) && \
-		export IDF_TOOLS_PATH=${here}/firmware/idf-tools && \
 		\
-		./install.sh && \
-		. ./export.sh && \
+		# for < v1.14 \
+		pip install -r requirements.txt && \
+		\
+		# attempted for v1.14 install. Leaving here for now. \
+		# export IDF_PATH=$$(pwd) && \
+		# export IDF_TOOLS_PATH=${here}/firmware/idf-tools && \
+		# ./install.sh && \
+		# . ./export.sh && \
 		\
 		cd ${micropython_dir}/ports/esp32 && \
 			export BOARD=GENERIC && \
+			export FROZEN_MANIFEST_INCLUDE=$$(pwd)/boards/manifest.py && \
 			\
 			$(make) submodules && \
 			$(make) all
@@ -64,16 +72,17 @@ esp32: _qstr-defs
 esp32-fresh:
 	cd ${micropython_dir}/ports/esp32 && \
 		rm -rf ${micropython_dir}/ports/esp32/build-GENERIC && \
+		\
 		$(make) clean && \
-		$(make) erase
+		$(make) clean-frozen
 	$(make) esp32
 
-esp32-deploy: esp32
+esp32-deploy:
 	cd ${micropython_dir}/ports/esp32 && \
 		$(make) deploy
 
-esp32-repl: esp32-deploy
-	rshell -p /dev/ttyUSB0 cd /pyboard; repl
+esp32-repl:
+	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"
 
 
 # all these source files must be mpy-cross-compiled into bytecode
