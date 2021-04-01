@@ -390,7 +390,7 @@ class Function(FunctionBlock):
         if callable(self.func):
             # single function
             try:
-                val = self.func(*(self.inputs + self.args), **self.kwargs)
+                val = self.func(*(tuple(self.inputs) + self.args), **self.kwargs)
             except TypeError:
                 raise RuntimeError('Function invocation failed, check number of arguments') from None
             if isinstance(val, (list, tuple)):
@@ -406,7 +406,7 @@ class Function(FunctionBlock):
             out = []
             for f in self.func:
                 try:
-                    val = f(*(self.inputs + self.args), **self.kwargs)
+                    val = f(*(tuple(self.inputs) + self.args), **self.kwargs)
                 except TypeError:
                     raise RuntimeError('Function invocation failed, check number of arguments') from None
                 out.append(val)

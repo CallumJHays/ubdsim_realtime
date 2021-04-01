@@ -8,7 +8,9 @@ Created on Mon May 18 21:43:18 2020
 import colored
 from ansitable import ANSITable, Column
 import numpy as np
-from typing import Type, cast
+from typing import Callable
+
+from .state import BDSimState
 
 from .components import *
 from . import blocks as _blocks
@@ -42,7 +44,7 @@ class BlockDiagram:
     :vartype name: str
     """
     
-    def __init__(self, name='main', **kwargs):
+    def __init__(self, name='main', state: BDSimState=None, **kwargs):
 
 
         self.wirelist = []      # list of all wires
@@ -53,7 +55,7 @@ class BlockDiagram:
         self.name = name
         self.nstates = 0
         self.ndstates = 0
-
+        self.state = state
         self.options = None
         
         # map the block classes that have been loaded up
@@ -84,15 +86,17 @@ class BlockDiagram:
         wire.name = name
         return self.wirelist.append(wire)
     
-    def __getattr__(self, name: str) -> Type[Block]:
+    def __getattr__(self, name: str) -> Callable[..., Block]:
         assert name == name.upper(), "Block name must be in ALLCAPS"
 
         try:
             cls = self.block_classes[name]
-            def init_wrapper(*args, **kwargs):
-                return cls(*args, bd=self, **kwargs)
+            def init_wrapper(*args, **kwargs) -> Block:
+                block = cls(*args, bd=self, **kwargs)
+                self.add_block(block)
+                return block
 
-            return cast(Type[Block], init_wrapper)
+            return init_wrapper
 
         except:
             closest_3_blocknames = sorted(
@@ -101,7 +105,7 @@ class BlockDiagram:
             )[:3]
             
             raise Exception(
-                'Could not find a block by the name "{}".\n'
+                'Could not find an BlockDiagram.attr or a block by the name "{}".\n'
                 'Please check your spelling. The most similar block names are: {}.\n'
                 'If none of those look correct, check that your block library has been correctly imported.'
                 .format(name, closest_3_blocknames)
@@ -422,7 +426,7 @@ class BlockDiagram:
         for b in self.blocklist:
             if b.blockclass in ('source', 'transfer', 'clocked'):
                 self._propagate(b, t, sinks=sinks)
-                
+
         # check we have values for all
         for b in self.blocklist:
             if b.nin > 0 and not b.done:
@@ -613,25 +617,23 @@ class BlockDiagram:
     # ---------------------------------------------------------------------- #
 
     def _error_handler(self, where, block):
+        import sys
         err = sys.exc_info()  # get the exception
-
-        import traceback
 
         print(colored.fg('red'))
         print("[{}]: exception {} occurred in {} block {}  ".format(where, err[0].__name__, block.type, block.name))
         print(">>>> {}\n".format(err[1]))
-        traceback.print_tb(err[2])
         print(colored.attr(0))
         raise RuntimeError('Fatal failure')
 
     def getstate0(self):
         # get the state from each stateful block
-        x0 = np.array([])
+
+        x0 = np.zeros(0)
         for b in self.blocklist:
             try:
                 if b.blockclass == 'transfer':
                     x0 = np.r_[x0, b.getstate0()]
-                #print('x0', x0)
             except:
                 self._error_handler('getstate0', b)
         return x0
@@ -668,7 +670,7 @@ class BlockDiagram:
         """
         Harvest derivatives from all blocks .
         """
-        YD = np.array([])
+        YD = np.zeros(0)
         for b in self.blocklist:
             if b.blockclass == 'transfer':
                 try:

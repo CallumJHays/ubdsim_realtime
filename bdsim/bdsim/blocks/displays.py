@@ -163,8 +163,8 @@ class Scope(GraphicsBlock):
             super().reset()   # TODO should this be here?
 
             # init the arrays that hold the data
-            self.tdata = np.array([])
-            self.ydata = [np.array([]),] * self.nplots
+            self.tdata = np.zeros(0)
+            self.ydata = [np.zeros(0)] * self.nplots
 
             # create the figures
             self.fig = self.create_figure()

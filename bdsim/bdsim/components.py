@@ -359,7 +359,7 @@ class Clock:
 
     def getstate0(self):
         # get the state from each stateful block on this clock
-        x0 = np.array([])
+        x0 = np.zeros(0)
         for b in self.blocklist:
             x0 = np.r_[x0, b.getstate0()]
             #print('x0', x0)
@@ -367,7 +367,7 @@ class Clock:
 
     def getstate(self):
 
-        x = np.array([])
+        x = np.zeros(0)
         for b in self.blocklist:
             # update dstate
             assert b.updated, 'clocked block has incomplete inputs'
