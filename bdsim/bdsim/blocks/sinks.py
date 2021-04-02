@@ -130,10 +130,3 @@ class Stop(SinkBlock):
             raise RuntimeError('input to stop must be boolean or callable')
         if stop:
             self.bd.state.stop = self
-
-if __name__ == "__main__":
-
-    import pathlib
-    import os.path
-
-    exec(open(os.path.join(pathlib.Path(__file__).parent.absolute(), "test_sinks.py")).read())

@@ -136,10 +136,3 @@ class sdist(_sdist):
         gzip_4k(outbuf, self.archive_files[0])
 
         return r
-
-
-# For testing only
-if __name__ == "__main__":
-    filter_tar(sys.argv[1])
-    outbuf.seek(0)
-    gzip_4k(outbuf, sys.argv[1])

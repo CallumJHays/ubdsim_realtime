@@ -349,12 +349,3 @@ class ZOH(ClockedBlock):
 
 #         super().__init__(A=A, B=B, C=C, x0=x0, **kwargs)
 #         self.type = 'LTI'
-
-
-# if __name__ == "__main__":
-
-#     import pathlib
-#     import os.path
-
-#     exec(open(os.path.join(pathlib.Path(
-#         __file__).parent.absolute(), "test_transfers.py")).read())

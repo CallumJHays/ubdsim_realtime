@@ -515,10 +515,3 @@ class Interpolate(FunctionBlock):
             xnew = self.inputs[0]
         return [self.f(xnew)]
 
-
-if __name__ == "__main__":
-
-    import pathlib
-    import os.path
-
-    exec(open(os.path.join(pathlib.Path(__file__).parent.absolute(), "test_functions.py")).read())

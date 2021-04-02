@@ -79,7 +79,19 @@ esp32-fresh:
 
 esp32-deploy:
 	cd ${micropython_dir}/ports/esp32 && \
+		\
+		# not the best way to do this but a quick fix and works - \
+		# allocate more partition space to ROM over FS \
+		cp ${here}/esp32_partitions.csv ./partitions.csv && \
+		\
 		$(make) deploy
+
+# should require esp32-deploy but that takes too long
+esp32-test:
+	rshell -p /dev/ttyUSB0 "\
+		cp test_ubdsim.py /pyboard/; \
+		cd /pyboard; \
+		repl ~ import test_ubdsim.py"
 
 esp32-repl:
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"

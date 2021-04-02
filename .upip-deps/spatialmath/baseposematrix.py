@@ -1,0 +1,786 @@
+# Part of Spatial Math Toolbox for Python
+# Copyright (c) 2000 Peter Corke
+# MIT Licence, see details in top-level file: LICENCE
+
+import numpy as np
+from spatialmath.base import base
+from spatialmath.baseposelist import BasePoseList
+from spatialmath.base import symbolic as sym
+
+_eps = np.finfo(np.float64).eps
+
+# colored printing of matrices to the terminal
+#   colored package has much finer control than colorama, but the latter is available by default with anaconda
+try:
+    from colored import fg, bg, attr
+    _colored = True
+    # print('using colored output')
+except ImportError:
+    # print('colored not found')
+    _colored = False
+
+try:
+    from ansitable import ANSIMatrix
+    _ANSIMatrix = True
+    # print('using colored output')
+except ImportError:
+    # print('colored not found')
+    _ANSIMatrix = False
+
+
+class BasePoseMatrix(BasePoseList):
+    """
+    Superclass for SO(N) and SE(N) objects
+
+    Subclasses are:
+
+    - ``SO2`` representing elements of SO(2) which describe rotations in 2D
+    - ``SE2`` representing elements of SE(2) which describe rigid-body motion in 2D
+    - ``SO3`` representing elements of SO(3) which describe rotations in 3D
+    - ``SE3`` representing elements of SE(3) which describe rigid-body motion in 3D
+
+    Arithmetic operators are overloaded but the operation they perform depend
+    on the types of the operands.  For example:
+
+    - ``*`` will compose two instances of the same subclass, and the result will
+      be an instance of the same subclass, since this is a group operator.
+    - ``+`` will add two instances of the same subclass, and the result will be
+      a matrix, not an instance of the same subclass, since addition is not a group operator.
+
+    These classes all inherit from ``UserList`` which enables them to 
+    represent a sequence of values, ie. an ``SE3`` instance can contain
+    a sequence of SE(3) values.  Most of the Python ``list`` operators
+    are applicable::
+
+        >>> x = SE3()  # new instance with identity matrix value
+        >>> len(x)     # it is a sequence of one value
+        1
+        >>> x.append(x)  # append to itself
+        >>> len(x)       # it is a sequence of two values
+        2
+        >>> x[1]         # the element has a 4x4 matrix value
+        SE3([
+        array([[1., 0., 0., 0.],
+               [0., 1., 0., 0.],
+               [0., 0., 1., 0.],
+            [0., 0., 0., 1.]]) ])
+        >>> x[1] = SE3.Rx(0.3)  # set an elements of the sequence
+        >>> x.reverse()         # reverse the elements in the sequence
+        >>> del x[1]            # delete an element
+
+    For console printing colorization is supported if the package ``colored``
+    is installed.  Class variables control the colorization and can be assigned
+    to at any time.
+
+    ===============  ===================  ============================================
+    Variable         Default              Description
+    ===============  ===================  ============================================
+    _rotcolor        'red'                Foreground color of rotation submatrix
+    _transcolor      'blue'               Foreground color of rotation submatrix
+    _constcolor      'grey_50'            Foreground color of matrix constant elements
+    _bgcolor         None                 Background color of matrix
+    _indexcolor      (None, 'yellow_2')   Foreground, background color of index tag
+    _format          '{:< 12g}'           Format string for each matrix element
+    _suppress_small  True                 Suppress *small* values, set to zero
+    _suppress_tol    100                  Threshold for *small* values in eps units
+    _ansimatrix      False                Display with matrix brackets
+    ===============  ===================  ============================================
+
+    If color is specified as ``None`` it means no colorization is performed.
+
+    For example::
+
+        >> SE3._bgcolor = None
+        >> SE3._indexcolor = ('green', None)
+
+    .. note:: The ``_ansimatrix`` option requires that the ``ansitable`` package
+        is installed.  It does not currently support colorization of elements.
+    """
+
+    _rotcolor = 'red'
+    _transcolor = 'blue'
+    _bgcolor = None
+    _constcolor = 'grey_50'
+    _indexcolor = (None, 'yellow_2')
+    _format = '{:< 12g}'
+    _suppress_small = True
+    _suppress_tol = 100
+    _color = _colored
+    _ansimatrix = False
+    _ansiformatter = None
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Create the subclass instance (superclass method)
+
+        Create a new instance and call the superclass initializer to enable the 
+        ``UserList`` capabilities.
+        """
+
+        pose = super(BasePoseMatrix, cls).__new__(cls)  # create a new instance
+        super().__init__(pose)  # initialize UserList
+        return pose
+
+# ------------------------------------------------------------------------ #
+
+    @property
+    def about(self):
+        """
+        Succinct summary of object type and length (superclass property)
+
+        :return: succinct summary
+        :rtype: str
+
+        Displays the type and the number of elements in compact form, for 
+        example::
+
+            >>> x = SE3([SE3() for i in range(20)])
+            >>> len(x)
+            20
+            >>> print(x.about)
+            SE3[20]
+        """
+        return "{:s}[{:d}]".format(type(self).__name__, len(self))
+
+    @property
+    def N(self):
+        """
+        Dimension of the object's group (superclass property)
+
+        :return: dimension
+        :rtype: int
+
+        Dimension of the group is 2 for ``SO2`` or ``SE2``, and 3 for ``SO3`` or ``SE3``.
+        This corresponds to the dimension of the space, 2D or 3D, to which these
+        rotations or rigid-body motions apply.
+
+        Example::
+
+            >>> SE3().N
+            3
+            >>> SE2().N
+            2
+        """
+        if type(self).__name__ == 'SO2' or type(self).__name__ == 'SE2':
+            return 2
+        else:
+            return 3
+
+    #----------------------- tests
+    @property
+    def isSO(self):
+        """
+        Test if object belongs to SO(n) group (superclass property)
+
+        :param self: object to test
+        :type self: SO2, SE2, SO3, SE3 instance
+        :return: ``True`` if object is instance of SO2 or SO3
+        :rtype: bool
+        """
+        return type(self).__name__ == 'SO2' or type(self).__name__ == 'SO3'
+
+    @property
+    def isSE(self):
+        """
+        Test if object belongs to SE(n) group (superclass property)
+
+        :param self: object to test
+        :type self: SO2, SE2, SO3, SE3 instance
+        :return: ``True`` if object is instance of SE2 or SE3
+        :rtype: bool
+        """
+        return type(self).__name__ == 'SE2' or type(self).__name__ == 'SE3'
+
+
+# ------------------------------------------------------------------------ #
+
+
+# ------------------------------------------------------------------------ #
+
+    # --------- compatibility methods
+
+
+    def isrot(self):
+        """
+        Test if object belongs to SO(3) group (superclass method)
+
+        :return: ``True`` if object is instance of SO3
+        :rtype: bool
+
+        For compatibility with Spatial Math Toolbox for MATLAB.
+        In Python use ``isinstance(x, SO3)``.
+
+        Example::
+
+            >>> x = SO3()
+            >>> x.isrot()
+            True
+            >>> x = SE3()
+            >>> x.isrot()
+            False
+        """
+        return type(self).__name__ == 'SO3'
+
+    def isrot2(self):
+        """
+        Test if object belongs to SO(2) group (superclass method)
+
+        :return: ``True`` if object is instance of SO2
+        :rtype: bool
+
+        For compatibility with Spatial Math Toolbox for MATLAB.
+        In Python use ``isinstance(x, SO2)``.
+
+        Example::
+
+            >>> x = SO2()
+            >>> x.isrot()
+            True
+            >>> x = SE2()
+            >>> x.isrot()
+            False
+        """
+        return type(self).__name__ == 'SO2'
+
+    def ishom(self):
+        """
+        Test if object belongs to SE(3) group (superclass method)
+
+        :return: ``True`` if object is instance of SE3
+        :rtype: bool
+
+        For compatibility with Spatial Math Toolbox for MATLAB.
+        In Python use ``isinstance(x, SE3)``.
+
+        Example::
+
+            >>> x = SO3()
+            >>> x.isrot()
+            False
+            >>> x = SE3()
+            >>> x.isrot()
+            True
+        """
+        return type(self).__name__ == 'SE3'
+
+    def ishom2(self):
+        """
+        Test if object belongs to SE(2) group (superclass method)
+
+        :return: ``True`` if object is instance of SE2
+        :rtype: bool
+
+        For compatibility with Spatial Math Toolbox for MATLAB.
+        In Python use ``isinstance(x, SE2)``.
+
+        Example::
+
+            >>> x = SO2()
+            >>> x.isrot()
+            False
+            >>> x = SE2()
+            >>> x.isrot()
+            True
+        """
+        return type(self).__name__ == 'SE2'
+
+     #----------------------- functions
+
+    def det(self):
+        """
+        Determinant of rotational component (superclass method)
+
+        :return: Determinant of rotational component
+        :rtype: float or NumPy array
+
+        ``x.det()`` is the determinant of the rotation component of the values
+        of ``x``.  
+
+        Example::
+
+            >>> x=SE3.Rand()
+            >>> x.det()
+            1.0000000000000004
+            >>> x=SE3.Rand(N=2)
+            >>> x.det()
+            [0.9999999999999997, 1.0000000000000002]
+
+        :SymPy: not supported
+        """
+        if type(self).__name__ in ('SO3', 'SE3'):
+            if len(self) == 1:
+                return np.linalg.det(self.A[:3,:3])
+            else:
+                return [np.linalg.det(T[:3,:3]) for T in self.data]
+        elif type(self).__name__ in ('SO2', 'SE2'):
+            if len(self) == 1:
+                return np.linalg.det(self.A[:2,:2])
+            else:
+                return [np.linalg.det(T[:2,:2]) for T in self.data]
+
+
+    def log(self, twist=False):
+        """
+        Logarithm of pose (superclass method)
+
+        :return: logarithm :rtype: numpy.ndarray :raises: ValueError
+
+        An efficient closed-form solution of the matrix logarithm.
+
+        =====  ======  ===============================
+        Input         Output
+        -----  ---------------------------------------
+        Pose   Shape   Structure
+        =====  ======  ===============================
+        SO2    (2,2)   skew-symmetric SE2    (3,3)   augmented skew-symmetric
+        SO3    (3,3)   skew-symmetric SE3    (4,4)   augmented skew-symmetric
+        =====  ======  ===============================
+
+        Example::
+
+            >>> x = SE3.Rx(0.3)
+            >>> y = x.log()
+            >>> y
+            array([[ 0. , -0. ,  0. ,  0. ],
+                   [ 0. ,  0. , -0.3,  0. ],
+                   [-0. ,  0.3,  0. ,  0. ],
+                   [ 0. ,  0. ,  0. ,  0. ]])
+
+
+        :seealso: :func:`~spatialmath.base.transforms2d.trlog2`,
+        :func:`~spatialmath.base.transforms3d.trlog`
+
+        :SymPy: not supported
+        """
+        if self.N == 2:
+            log = [base.trlog2(x, twist=twist) for x in self.data]
+        else:
+            log = [base.trlog(x, twist=twist) for x in self.data]
+        if len(log) == 1:
+            return log[0]
+        else:
+            return log
+
+    def interp(self, end=None, s=None):
+        """
+        Interpolate between poses (superclass method)
+
+        :param end: final pose
+        :type end: same as ``self``
+        :param s: interpolation coefficient, range 0 to 1, or number of steps
+        :type s: array_like or int
+        :return: interpolated pose
+        :rtype: same as ``self``
+
+        - ``X.interp(Y, s)`` interpolates pose between X between when s=0
+          and Y when s=1.
+        - ``X.interp(Y, N)`` interpolates pose between X and Y in ``N`` steps.
+
+        Example:
+
+        .. runblock:: pycon
+
+            >>> x = SE3(-1, -2, 0) * SE3.Rx(-0.3)
+            >>> y = SE3(1, 2, 0) * SE3.Rx(0.3)
+            >>> x.interp(y, 0)    # this is x
+            >>> x.interp(y, 1)    # this is y
+            >>> x.interp(y, 0.5)  # this is in between
+            >>> z = x.interp(y, 11)  # in 11 steps
+            >>> len(z)
+            >>> z[0]              # this is x
+            >>> z[5]              # this is in between
+
+        .. note::
+
+            - For SO3 and SE3 rotation is interpolated using quaternion spherical linear interpolation (slerp).
+            - Values of ``s`` outside the range [0,1] are silently clipped
+        :seealso: :func:`interp1`, :func:`~spatialmath.base.transforms3d.trinterp`, :func:`~spatialmath.base.quaternions.slerp`, :func:`~spatialmath.base.transforms2d.trinterp2`
+
+        :SymPy: not supported
+        """
+
+        if isinstance(s, int) and s > 1:
+            s = np.linspace(0, 1, s)
+        else:
+            s = base.getvector(s)
+            s = np.clip(s, 0, 1)
+
+        if len(self) > 1: 
+            raise ValueError('start pose must be a singleton')
+
+        if end is not None:
+            if len(end) > 1: 
+                raise ValueError('end pose must be a singleton')
+            end = end.A
+
+        if self.N == 2:
+            # SO(2) or SE(2)
+            return self.__class__([base.trinterp2(start=self.A, end=end, s=_s) for _s in s])
+
+        elif self.N == 3:
+            # SO(3) or SE(3)
+            return self.__class__([base.trinterp(start=self.A, end=end, s=_s) for _s in s])
+
+    def interp1(self, s=None):
+        """
+        Interpolate pose (superclass method)
+
+        :param end: final pose
+        :type end: same as ``self``
+        :param s: interpolation coefficient, range 0 to 1
+        :type s: array_like
+        :return: interpolated pose
+        :rtype: SO2, SE2, SO3, SE3 instance
+
+        - ``X.interp(s)`` interpolates pose between identity when s=0, and X when s=1.
+
+            ======  ======  ===========  ===============================
+            len(X)  len(s)  len(result)  Result
+            ======  ======  ===========  ===============================
+            1       1       1            Y = interp(X, s)
+            M       1       M            Y[i] = interp(X[i], s)
+            1       M       M            Y[i] = interp(X, s[i])
+            ======  ======  ===========  ===============================
+
+        Example::
+
+            >>> x = SE3.Rx(0.3)
+            >>> print(x.interp(0))
+            SE3(array([[1., 0., 0., 0.],
+                       [0., 1., 0., 0.],
+                       [0., 0., 1., 0.],
+                       [0., 0., 0., 1.]]))
+            >>> print(x.interp(1))
+            SE3(array([[ 1.        ,  0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.95533649, -0.29552021,  0.        ],
+                       [ 0.        ,  0.29552021,  0.95533649,  0.        ],
+                       [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+            >>> y = x.interp(x, np.linspace(0, 1, 10))
+            >>> len(y)
+            10
+            >>> y[5]
+            SE3(array([[ 1.        ,  0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.98614323, -0.16589613,  0.        ],
+                       [ 0.        ,  0.16589613,  0.98614323,  0.        ],
+                       [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+
+        Notes:
+
+        #. For SO3 and SE3 rotation is interpolated using quaternion spherical linear interpolation (slerp).
+
+        :seealso: :func:`interp`, :func:`~spatialmath.base.transforms3d.trinterp`, :func:`~spatialmath.base.quaternions.slerp`, :func:`~spatialmath.base.transforms2d.trinterp2`
+
+        :SymPy: not supported
+        """
+        s = base.getvector(s)
+        s = np.clip(s, 0, 1)
+
+        if start is not None:
+            assert len(start) == 1, 'len(start) must == 1'
+            start = start.A
+
+        if self.N == 2:
+            # SO(2) or SE(2)
+            if len(s) > 1:
+                assert len(self) == 1, 'if len(s) > 1, len(X) must == 1'
+                return self.__class__([base.trinterp2(start, self.A, s=_s) for _s in s])
+            else:
+                return self.__class__([base.trinterp2(start, x, s=s[0]) for x in self.data])
+        elif self.N == 3:
+            # SO(3) or SE(3)
+            if len(s) > 1:
+                assert len(self) == 1, 'if len(s) > 1, len(X) must == 1'
+                return self.__class__([base.trinterp(start, self.A, s=_s) for _s in s])
+            else:
+                return self.__class__([base.trinterp(start, x, s=s[0]) for x in self.data])
+    def norm(self):
+        """
+        Normalize pose (superclass method)
+
+        :return: pose
+        :rtype: SO2, SE2, SO3, SE3 instance
+
+        - ``X.norm()`` is an equivalent pose object but the rotational matrix 
+          part of all values has been adjusted to ensure it is a proper orthogonal
+          matrix rotation.
+
+        Example::
+
+            >>> x = SE3()
+            >>> y = x.norm()
+            >>> y
+            SE3(array([[1., 0., 0., 0.],
+                       [0., 1., 0., 0.],
+                       [0., 0., 1., 0.],
+                       [0., 0., 0., 1.]]))
+
+        Notes:
+
+        #. Only the direction of A vector (the z-axis) is unchanged.
+        #. Used to prevent finite word length arithmetic causing transforms to 
+           become 'unnormalized'.
+
+        :seealso: :func:`~spatialmath.base.transforms3d.trnorm`, :func:`~spatialmath.base.transforms2d.trnorm2`
+        """
+        if self.N == 2:
+            return self.__class__([base.trnorm2(x) for x in self.data])
+        else:
+            return self.__class__([base.trnorm(x) for x in self.data])
+
+    def simplify(self):
+        """
+        Symbolically simplify matrix values (superclass method)
+
+        :return: pose with symbolic elements
+        :rtype: pose instance
+
+        Apply symbolic simplification to every element of every value in the
+        pose instane. 
+
+        Example::
+
+            >>> a = SE3.Rx(sympy.symbols('theta'))
+            >>> b = a * a
+            >>> b
+            SE3(array([[1, 0, 0, 0.0],
+            [0, -sin(theta)**2 + cos(theta)**2, -2*sin(theta)*cos(theta), 0],
+            [0, 2*sin(theta)*cos(theta), -sin(theta)**2 + cos(theta)**2, 0],
+            [0.0, 0, 0, 1.0]], dtype=object)
+            >>> b.simplify()
+            SE3(array([[1, 0, 0, 0],
+            [0, cos(2*theta), -sin(2*theta), 0],
+            [0, sin(2*theta), cos(2*theta), 0],
+            [0, 0, 0, 1.00000000000000]], dtype=object))
+
+        .. todo:: No need to simplify the constants in bottom row
+
+        :SymPy: supported
+        """
+
+        vf = np.vectorize(sym.simplify)
+        return self.__class__([vf(x) for x in self.data], check=False)
+
+    # ----------------------- i/o stuff
+
+    def printline(self, **kwargs):
+        """
+        Stringify pose as a single line (superclass method)
+
+        :param label: text label to put at start of line
+        :type label: str
+        :param fmt: conversion format for each number as used by ``format()``
+        :type fmt: str
+        :param label: text label to put at start of line
+        :type label: str
+        :param orient: 3-angle convention to use, optional, ``SO3`` and ``SE3``
+                       only
+        :type orient: str
+        :param unit: angular units: 'rad' [default], or 'deg'
+        :type unit: str
+        :param file: file to write formatted string to. [default, stdout]
+        :type file: 
+        :return: formatted string
+        :rtype: str
+
+        - ``X.printline()`` print ``X`` in single-line format
+        - ``X.printline(file=None)`` is a string representing the pose ``X`` in single-line format
+
+        If ``X`` has multiple values, print one per line.
+
+        Example::
+
+            >>> x=SE3.Rx(0.3)
+            >>> x.printline()
+            t =        0,        0,        0; rpy/zyx =       17°,        0°,        0°
+            >>> x = SE3.Rx([0.2, 0.3])
+            >>> x.printline()
+            t =        0,        0,        0; rpy/zyx =       11°,        0°,        0°
+            t =        0,        0,        0; rpy/zyx =       17°,        0°,        0°
+        >> x = SE2(1, 2, 0.3)
+            >>> x.printline()
+            t =        1,        2;       17 deg
+        
+        .. note:: The formatted string is always returned.
+
+        """
+        s = []
+        if self.N == 2:
+            for x in self.data:
+                s.append(base.trprint2(x, **kwargs))
+        else:
+            for x in self.data:
+                s.append(base.trprint(x, **kwargs))
+
+        return '\n'.join(s)
+
+    def __repr__(self):
+        """
+        Readable representation of pose (superclass method)
+
+        :return: readable representation of the pose as a list of arrays
+        :rtype: str
+
+        Example::
+
+            >>> x = SE3.Rx(0.3)
+            >>> x
+            SE3(array([[ 1.        ,  0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.95533649, -0.29552021,  0.        ],
+                       [ 0.        ,  0.29552021,  0.95533649,  0.        ],
+                       [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+
+        """
+
+        # TODO: really should iterate over all the elements, can have a symb
+        #       element and ~eps values
+        def trim(x):
+            if x.dtype == 'O':
+                return x
+            else:
+                return base.removesmall(x)
+
+        name = type(self).__name__
+        if len(self) == 0:
+            return name + '([])'
+        elif len(self) == 1:
+            # need to indent subsequent lines of the native repr string by 4 spaces
+            return name + '(' + trim(self.A).__repr__().replace('\n', '\n    ') + ')'
+        else:
+            # format this as a list of ndarrays
+            return name + '([\n' + ',\n'.join([trim(v).__repr__() for v in self.data]) + ' ])'
+
+
+    def __str__(self):
+        """
+        Pretty string representation of pose (superclass method)
+
+        :return: readable representation of the pose
+        :rtype: str
+
+        Convert the pose's matrix value to a simple grid of numbers.
+
+        Example::
+
+            >>> x = SE3.Rx(0.3)
+            >>> print(x)
+               1           0           0           0            
+               0           0.955336   -0.29552     0            
+               0           0.29552     0.955336    0            
+               0           0           0           1 
+
+        Notes:
+
+            - By default, the output is colorised for an ANSI terminal console:
+
+                * red: rotational elements
+                * blue: translational elements
+                * white: constant elements
+
+        """
+        if _ANSIMatrix and self._ansimatrix:
+            return self._string_matrix()
+        else:
+            return self._string_color(color=True)
+
+    def _string_matrix(self):
+        if self._ansiformatter is None:
+            self._ansiformatter = ANSIMatrix(style='thick')
+
+        return "\n".join([self._ansiformatter.str(A) for A in self.data])
+
+    def _string_color(self, color=False):
+        """
+        Pretty print the matrix value
+
+        :param color: colorise the output, defaults to False
+        :type color: bool, optional
+        :param tol: zero values smaller than tol*eps, defaults to 10
+        :type tol: float, optional
+        :return: multiline matrix representation
+        :rtype: str
+
+        Convert a matrix to a simple grid of numbers with optional
+        colorization for an ANSI terminal console:
+
+                * red: rotational elements
+                * blue: translational elements
+                * white: constant elements
+
+        Example::
+
+            >>> x = SE3.Rx(0.3)
+            >>> print(str(x))
+               1           0           0           0            
+               0           0.955336   -0.29552     0            
+               0           0.29552     0.955336    0            
+               0           0           0           1 
+
+        """
+        #print('in __str__', _color)
+        
+        if self._color:
+
+            def color(c, f):
+                if c is None:
+                    return ''
+                else:
+                    return f(c)
+            bgcol = color(self._bgcolor, bg)
+            trcol = color(self._transcolor, fg) + bgcol
+            rotcol = color(self._rotcolor, fg) + bgcol
+            constcol = color(self._constcolor, fg) + bgcol
+            indexcol = color(self._indexcolor[0], fg) \
+                       + color(self._indexcolor[1], bg)
+            reset = attr(0)
+        else:
+            bgcol = ''
+            trcol = ''
+            rotcol = ''
+            constcol = ''
+            reset = ''
+
+        def mformat(self, X):
+            # X is an ndarray value to be display
+            # self provides set type for formatting
+            out = ''
+            n = self.N  # dimension of rotation submatrix
+            for rownum, row in enumerate(X):
+                rowstr = '  '
+                # format the columns
+                for colnum, element in enumerate(row):
+                    if sym.issymbol(element):
+                        s = '{:<12s}'.format(str(element))
+                    else:
+                        if self._suppress_small and abs(element) < self._suppress_tol * _eps:
+                            element = 0
+                        s = self._format.format(element)
+
+                    if rownum < n:
+                        if colnum < n:
+                            # rotation part
+                            s = rotcol + bgcol + s + reset
+                        else:
+                            # translation part
+                            s = trcol + bgcol + s + reset
+                    else:
+                        # bottom row
+                        s = constcol + bgcol + s + reset
+                    rowstr += s
+                out += rowstr + bgcol + '  ' + reset + '\n'
+            return out
+
+        output_str = ''
+
+        if len(self.data) == 0:
+            output_str = '[]'
+        elif len(self.data) == 1:
+            # single matrix case
+            output_str = mformat(self, self.A)
+        else:
+            # sequence case
+            for count, X in enumerate(self.data):
+                # add separator lines and the index
+                output_str += indexcol + '[{:d}] ='.format(count) + reset \
+                    + '\n' + mformat(self, X)
+
+        return output_str

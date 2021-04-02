@@ -4,8 +4,6 @@ firmware/bytecode/*
 !firmware/bytecode/sdist_upip.py
 # downloaded compilers etc (from esp-idf/install.sh if used)
 firmware/idf-tools
-.upip-deps/*
-!.upip-deps/__init__.py
 firmware/.build-flags
 
 # Byte-compiled / optimized / DLL files

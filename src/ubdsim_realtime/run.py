@@ -5,6 +5,10 @@ from ubdsim.state import BDSimState
 
 def run(bd: BlockDiagram, max_time=None):
 
+    FPS_AV_FACTOR = 1 / 15  # smaller number averages over more frames
+    FPS_AV_FACTOR_INV = 1 - FPS_AV_FACTOR
+    fps = 30
+
     bd.T = max_time
     bd.state = BDSimState()
 
@@ -26,6 +30,7 @@ def run(bd: BlockDiagram, max_time=None):
     while not bd.state.stop and (max_time is None or bd.t < max_time):
         bd.reset()
 
+        last_t = bd.t
         bd.t = time.time() - start
 
         # propagate from source blocks onwards
@@ -40,5 +45,9 @@ def run(bd: BlockDiagram, max_time=None):
         # update state, displays, etc
         bd.step()
 
-        # if tuner:
-        #     tuner.update()
+        frequency = 1 / (bd.t - last_t) if last_t else fps
+
+        # moving average formula
+        fps = FPS_AV_FACTOR * frequency + FPS_AV_FACTOR_INV * fps
+        print('FPS', fps)
+

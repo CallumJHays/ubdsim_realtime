@@ -281,10 +281,3 @@ class Step(SourceBlock):
 
         #print(out)
         return [out]
-
-if __name__ == "__main__":
-
-    import pathlib
-    import os.path
-
-    exec(open(os.path.join(pathlib.Path(__file__).parent.absolute(), "test_sources.py")).read())

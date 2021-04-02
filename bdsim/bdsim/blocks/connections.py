@@ -357,10 +357,3 @@ class OutPort(SubsystemBlock):
     def output(self, t=None):
         # signal feed through
         return self.inputs
-
-if __name__ == "__main__":
-
-    import pathlib
-    import os.path
-
-    exec(open(os.path.join(pathlib.Path(__file__).parent.absolute(), "test_connections.py")).read())

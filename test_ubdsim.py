@@ -6,7 +6,6 @@ bd = BlockDiagram()
 five = bd.CONSTANT(5)
 six = bd.CONSTANT(6)
 sum = bd.SUM('++', five, six)
-print_res = bd.FUNCTION(lambda sum: print("SUM:", sum), sum)
 
 bd.compile()
 print('compiled')
