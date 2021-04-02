@@ -1,4 +1,7 @@
 
+from typing import Optional
+
+
 class BDSimState:
 
     """
@@ -22,8 +25,8 @@ class BDSimState:
     def __init__(self):
 
         self.x = None           # continuous state vector numpy.ndarray
-        self.T = None           # maximum.BlockDiagram time
-        self.t = None           # current time
+        self.T: Optional[float] = None           # maximum.BlockDiagram time
+        self.t: Optional[float] = None           # current time
         self.fignum = 0
         self.stop = None
         self.checkfinite = True

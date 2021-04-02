@@ -25,30 +25,34 @@ stubs:
 	python3 extract_stubs_ulab.py firmware/ulab/code .micropy/ulab/ulab
 
 # unix port
-unix: _qstr-defs
+unix: .build-flags/unix
+.build-flags/unix: .build-flags/qstr-defs .build-flags/src-code
 	cd ${micropython_dir}/ports/unix && \
 		$(make) submodules && \
 		$(make) deplibs && \
 		$(make) all
+	touch $@
 
 micropython=${micropython_dir}/ports/unix/micropython
 
 unix-fresh:
+	rm -f .build-flags/unix
 	cd ${micropython_dir}/ports/unix && \
 		$(make) clean && \
 		$(make) clean-frozen
 	$(make) unix
 
-unix-repl: unix
+unix-repl: .build-flags/unix
 	$(micropython)
 
-unix-test: unix
+unix-test: .build-flags/unix
 	# MICROPYPATH="" fixes a weird import issue
 	# https://github.com/micropython/micropython/issues/2322#issuecomment-277845841
 	MICROPYPATH="" $(micropython) test_ubdsim.py
 
 # esp32 port
-esp32: _qstr-defs
+esp32: .build-flags/esp32
+.build-flags/esp32: .build-flags/qstr-defs .build-flags/src-code
 	cd ${ESPIDF} && \
 		git submodule sync --recursive && \
 		git submodule update --init --recursive && \
@@ -68,8 +72,10 @@ esp32: _qstr-defs
 			\
 			$(make) submodules && \
 			$(make) all
+	touch $@
 
 esp32-fresh:
+	rm -f .build-flags/esp32
 	cd ${micropython_dir}/ports/esp32 && \
 		rm -rf ${micropython_dir}/ports/esp32/build-GENERIC && \
 		\
@@ -77,7 +83,8 @@ esp32-fresh:
 		$(make) clean-frozen
 	$(make) esp32
 
-esp32-deploy:
+esp32-deploy: .build-flags/esp32-deployed
+.build-flags/esp32-deployed: .build-flags/esp32
 	cd ${micropython_dir}/ports/esp32 && \
 		\
 		# not the best way to do this but a quick fix and works - \
@@ -85,15 +92,15 @@ esp32-deploy:
 		cp ${here}/esp32_partitions.csv ./partitions.csv && \
 		\
 		$(make) deploy
+	touch $@
 
-# should require esp32-deploy but that takes too long
-esp32-test:
+esp32-test: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "\
 		cp test_ubdsim.py /pyboard/; \
 		cd /pyboard; \
-		repl ~ import test_ubdsim.py"
+		repl ~ import test_ubdsim"
 
-esp32-repl:
+esp32-repl: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"
 
 
@@ -103,7 +110,7 @@ UBDSIM_PY_SRC=$(call _rwildcard,ubdsim,*.py)
 UBDSIM_RT_PY_SRC=$(call _rwildcard,ubdsim_realtime,*.py)
 
 # all the bytecode from ubdsim and ubdsim_realtime
-dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _mpy-cross
+dist: _src-code _mpy-cross
 	# can't use these as proper dependencies - make has no dynamic dependency evaluation :(
 	# have to do it manually
 	set -e && \
@@ -118,6 +125,9 @@ dist: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py) _mpy-cross
 	cd firmware/bytecode && \
 		python3 setup.py sdist
 
+.build-flags/src-code: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py)
+	touch $@
+
 # cross-compiled micropython bytecode
 # for any targets with `ubdsim/*`, retarget to `ubdsim/bdsim/*`
 # should really depend on 'mpy-cross', and kinda does as long as this is only made from the above for loop
@@ -128,11 +138,14 @@ firmware/bytecode/%.mpy: %.py
 	set -e && \
 		${micropython_dir}/mpy-cross/mpy-cross -O 3 -o $@ $<
 
-_qstr-defs: _mpy-cross # alias for clarity
-
-_mpy-cross:
+.build-flags/mpy-cross: $(wildcard firmware/ulab/**/*.c) $(wildcard firmware/ulab/**/*.h)
 	# ensures mpy-cross is updated with the latest QSTR definitions from USER_C_MODULES
 	$(make) V=1 -C ${micropython_dir}/mpy-cross
+	touch $@
+
+# alias for clarity. qstr defs get commpiled by mpy-cross
+.build-flags/qstr-defs: .build-flags/mpy-cross
+	touch $@
 
 # function to recursively list files matching glob pattern.
 # https://stackoverflow.com/a/18258352/1266662

@@ -1,0 +1,3 @@
+# build flags for root Makefile
+*
+!.gitignore
