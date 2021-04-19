@@ -6,18 +6,24 @@ import os
 
 print('freezing modules as as mpy')
 
-srcfiles = [
-    f"{dirpath.replace('src/', '')}/{filename}"
-    for dirpath, _, filenames in os.walk('src', followlinks=True)
-    for filename in filenames
-    if "test_" not in filename
-]
-freeze_as_mpy('src', srcfiles, opt=3)
+dont_freeze = os.getenv('DONT_FREEZE_MPY').split(':')
+print("~~~~~~~ DONT_FREEZE_MPY =", dont_freeze)
 
+to_freeze_src = []
+for dirpath, _, filenames in os.walk('src', followlinks=True):
+    if dirpath in dont_freeze:
+        continue
+    for filename in filenames:
+        filepath = f"{dirpath.replace('src/', '')}/{filename}"
+        if "test_" not in filename and (dirpath + filepath) not in dont_freeze:
+            to_freeze_src.append(filepath)
+
+freeze_as_mpy('src', to_freeze_src, opt=3)
 freeze_as_mpy("firmware/micropython/tools", ("upip.py", "upip_utarfile.py"), opt=3)
 freeze_as_mpy(".upip-deps", opt=3)
 
 include_paths = os.getenv('FROZEN_MANIFEST_INCLUDE')
+print("~~~~~~~ FROZEN_MANIFEST_INCLUDE =", include_paths)
 if include_paths:
     for path in include_paths.split(':'):
         print('including ' + path)

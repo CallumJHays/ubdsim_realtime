@@ -3,10 +3,10 @@ here = $(shell pwd)
 
 # include ulab in firmware
 SHELL := /bin/bash
-export USER_C_MODULES := ${here}/firmware/ulab
+export USER_C_MODULES ?= ${here}/firmware/ulab
 # include ubdsim as a frozen module for all builds
-export FROZEN_MANIFEST := ${here}/frozen_manifest.py
-export ESPIDF := ${here}/firmware/esp-idf
+export FROZEN_MANIFEST ?= ${here}/frozen_manifest.py
+export ESPIDF ?= ${here}/firmware/esp-idf
 export PATH := ${here}/firmware/xtensa-esp32-elf/bin:${PATH}
 # build with multiple cores
 NPROC := $(shell python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')
@@ -50,9 +50,24 @@ unix-test: .build-flags/unix
 	# https://github.com/micropython/micropython/issues/2322#issuecomment-277845841
 	MICROPYPATH="" $(micropython) test_ubdsim.py
 
+
+.build-flags/unix-unfrozen: .build-flags/qstr-defs
+	$(make) unix
+	touch $@
+
+unix-unfrozen-test: .build-flags/unix-unfrozen
+	# MICROPYPATH="" fixes a weird import issue
+	# https://github.com/micropython/micropython/issues/2322#issuecomment-277845841
+	MICROPYPATH="src:.upip-deps" $(micropython) test_ubdsim.py
+
+
+esp32-clean-mpy:
+	rm -rf ${micropython_dir}/ports/esp32/build-GENERIC/frozen_mpy
+	rm -f .build-flags/esp32*
+
 # esp32 port
 esp32: .build-flags/esp32
-.build-flags/esp32: .build-flags/qstr-defs .build-flags/src-code
+.build-flags/esp32: .build-flags/qstr-defs .build-flags/src-code frozen_manifest.py esp32-clean-mpy
 	cd ${ESPIDF} && \
 		git submodule sync --recursive && \
 		git submodule update --init --recursive && \
@@ -74,14 +89,13 @@ esp32: .build-flags/esp32
 			$(make) all
 	touch $@
 
-esp32-fresh:
-	rm -f .build-flags/esp32
+esp32-clean:
+	rm -f .build-flags/esp32*
 	cd ${micropython_dir}/ports/esp32 && \
 		rm -rf ${micropython_dir}/ports/esp32/build-GENERIC && \
 		\
 		$(make) clean && \
 		$(make) clean-frozen
-	$(make) esp32
 
 esp32-deploy: .build-flags/esp32-deployed
 .build-flags/esp32-deployed: .build-flags/esp32
@@ -102,6 +116,24 @@ esp32-test: .build-flags/esp32-deployed
 
 esp32-repl: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"
+
+.build-flags/esp32-unfrozen-deployed:
+	export DONT_FREEZE_MPY=src/ubdsim_realtime && \
+		$(make) esp32-deploy
+	touch $@
+
+esp32-unfrozen-test: .build-flags/esp32-unfrozen-deployed
+	rshell -p /dev/ttyUSB0 "\
+		rsync src/ubdsim_realtime /pyboard/lib/ubdsim_realtime; \
+		cp test_ubdsim.py /pyboard/; \
+		cd /pyboard; \
+		repl ~ from test_ubdsim import test ~ test()"
+
+esp32-unfrozen-repl: .build-flags/esp32-unfrozen-deployed
+	rshell -p /dev/ttyUSB0 "\
+		rsync src/ubdsim_realtime /pyboard/lib/ubdsim_realtime; \
+		cd /pyboard; \
+		repl"
 
 
 # all these source files must be mpy-cross-compiled into bytecode
@@ -125,7 +157,7 @@ dist: _src-code _mpy-cross
 	cd firmware/bytecode && \
 		python3 setup.py sdist
 
-.build-flags/src-code: $(wildcard ubdsim_realtime/**/*.py) $(wildcard ubdsim/**/*.py)
+.build-flags/src-code: $(wildcard src/**/*.py)
 	touch $@
 
 # cross-compiled micropython bytecode
@@ -138,7 +170,7 @@ firmware/bytecode/%.mpy: %.py
 	set -e && \
 		${micropython_dir}/mpy-cross/mpy-cross -O 3 -o $@ $<
 
-.build-flags/mpy-cross: $(wildcard firmware/ulab/**/*.c) $(wildcard firmware/ulab/**/*.h)
+.build-flags/mpy-cross: $(wildcard firmware/ulab/**/*.(ch)) $(wildcard firmware/ulab/**/*.h)
 	# ensures mpy-cross is updated with the latest QSTR definitions from USER_C_MODULES
 	$(make) V=1 -C ${micropython_dir}/mpy-cross
 	touch $@

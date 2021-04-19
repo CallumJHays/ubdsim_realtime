@@ -2,7 +2,7 @@ ansitable == 0.9.5
 matplotlib == 3.0.3
 numpy == 1.18.5
 pylint==2.3.1
-rshell == 0.0.28 # mpfshell or ampy might be better - but this works
+rshell == 0.0.30 # mpfshell or ampy might be better - but this works
 typing_extensions == 3.7.4.3
 autopep8 == 1.5.6
 spatialmath-python == 0.9.5

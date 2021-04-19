@@ -11,6 +11,7 @@ import numpy as np
 from typing import Callable
 
 from .state import BDSimState
+import utime
 
 from .components import *
 from . import blocks as _blocks
@@ -19,6 +20,33 @@ def isdebug(debug):
     # nonlocal debuglist
     # return debug in debuglist
     return False
+
+indent = ''
+def timed(f):
+    myname = str(f).split(' ')[1]
+    def new_func(*args, **kwargs):
+        global indent
+        print('{}{}.{}(*{}, **{})'.format(indent, args[0], myname, args[1:], kwargs))
+        indent += '    '
+        t = utime.ticks_us()
+
+        def toc(mark: str, reset: bool = False):
+            nonlocal t
+            now = utime.ticks_us()
+            print('{} {:6.3f}ms @ {}'.format(
+                indent,
+                utime.ticks_diff(now, t) / 1000,
+                mark
+            ))
+            if reset:
+                t = now
+
+        result = f(*args, toc=toc, **kwargs)
+        toc('END')
+        indent = indent[:-4]
+        return result
+    return new_func
+
 
 
 # ------------------------------------------------------------------------- #    
@@ -483,7 +511,8 @@ class BlockDiagram:
 
     # ---------------------------------------------------------------------- #
 
-    def _propagate(self, b, t, depth=0, checkfinite=True, sinks=True):
+    @timed
+    def _propagate(self, b, t, depth=0, checkfinite=True, sinks=True, toc=None):
         """
         Propagate values of a block to all connected inputs.
         
@@ -506,6 +535,7 @@ class BlockDiagram:
 
         # get output of block at time t
 
+        toc('output')
         try:
             out = b.output(t)
         except Exception as err:
@@ -519,6 +549,8 @@ class BlockDiagram:
 
         self.DEBUG('propagate', '  '*depth, 'block {:s}: output = '.format(str(b),t) + str(out))
 
+
+        toc('validity')
         # check for validity
         assert isinstance(out, list) and len(out) == b.nout, 'block output is wrong type/length'
 
@@ -528,12 +560,11 @@ class BlockDiagram:
         if checkfinite and isinstance(out, (int, float, np.ndarray)) and not np.isfinite(out).any():
             raise RuntimeError('block outputs nan')
         
+        toc('propagate')
         # propagate block outputs to all downstream connected blocks
         for (port, outwires) in enumerate(b.outports): # every port
             val = out[port]
             for w in outwires:     # every wire
-                
-                self.DEBUG('propagate', '  ', '  '*depth, '[', port, '] = ', val, ' --> ', w.end.block.name, '[', w.end.port, ']')
                 
                 # send value to wire
                 if w.send(val):
@@ -785,7 +816,7 @@ class BlockDiagram:
 
 
 # ripped from https://blog.paperspace.com/implementing-levenshtein-distance-word-autocomplete-autocorrect/
-def _levenshtein_distance(token1: str, token2: str):
+def _levenshtein_distance(token1: str, token2: str) -> float:
     distances = np.zeros((len(token1) + 1, len(token2) + 1))
 
     for t1 in range(len(token1) + 1):
