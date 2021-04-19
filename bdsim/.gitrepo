@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/petercorke/bdsim
 	branch = master
-	commit = 206e8423b878869e6cce8204cd1701c32bb2f239
+	commit = 1782a3b63649144236079e39876cdc9b3f57ce91
 	parent = a61f2ffcf9519efe037a7d176362e197e7087f5e
 	method = merge
 	cmdver = 0.4.3
