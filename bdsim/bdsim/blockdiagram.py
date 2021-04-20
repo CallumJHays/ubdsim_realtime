@@ -8,44 +8,18 @@ Created on Mon May 18 21:43:18 2020
 import colored
 from ansitable import ANSITable, Column
 import numpy as np
-from typing import Callable
+from typing import Callable, Dict, Type
 
 from .state import BDSimState
-import utime
 
 from .components import *
-from . import blocks as _blocks
+from . import blocks as _
 
 def isdebug(debug):
     # nonlocal debuglist
     # return debug in debuglist
     return False
 
-indent = ''
-def timed(f):
-    myname = str(f).split(' ')[1]
-    def new_func(*args, **kwargs):
-        global indent
-        print('{}{}.{}(*{}, **{})'.format(indent, args[0], myname, args[1:], kwargs))
-        indent += '    '
-        t = utime.ticks_us()
-
-        def toc(mark: str, reset: bool = False):
-            nonlocal t
-            now = utime.ticks_us()
-            print('{} {:6.3f}ms @ {}'.format(
-                indent,
-                utime.ticks_diff(now, t) / 1000,
-                mark
-            ))
-            if reset:
-                t = now
-
-        result = f(*args, toc=toc, **kwargs)
-        toc('END')
-        indent = indent[:-4]
-        return result
-    return new_func
 
 
 
@@ -88,7 +62,7 @@ class BlockDiagram:
         
         # map the block classes that have been loaded up
         # from their ALLCAPS name to their class object
-        self.block_classes = {
+        self.block_classes: Dict[str, Type[Block]] = {
             block_cls.__name__.upper(): block_cls
             for block_cls in blocklist
         }
@@ -518,8 +492,7 @@ class BlockDiagram:
 
     # ---------------------------------------------------------------------- #
 
-    @timed
-    def _propagate(self, b, t, depth=0, checkfinite=True, sinks=True, toc=None):
+    def _propagate(self, b, t, depth=0, checkfinite=True, sinks=True):
         """
         Propagate values of a block to all connected inputs.
         
@@ -542,7 +515,6 @@ class BlockDiagram:
 
         # get output of block at time t
 
-        toc('output')
         try:
             out = b.output(t)
         except Exception as err:
@@ -557,12 +529,11 @@ class BlockDiagram:
         self.DEBUG('propagate', '  '*depth, 'block {:s}: output = '.format(str(b),t) + str(out))
 
 
-        toc('validity')
         # check for validity
         if not isinstance(out, list):
-            raise AssertionError(f"block output {b} is not list: {type(out)}")
+            raise AssertionError("block output {} is not list: {}".format(b, type(out)))
         if len(out) != b.nout:
-            raise AssertionError(f"block output {b} is wrong length: {len(out)} instead of {b.nout}")
+            raise AssertionError("block output {} is wrong length: {} instead of {}".format(b, len(out), b.nout))
 
         # TODO check output validity once at the start
         
@@ -570,7 +541,6 @@ class BlockDiagram:
         if checkfinite and isinstance(out, (int, float, np.ndarray)) and not np.isfinite(out).any():
             raise RuntimeError('block outputs nan')
         
-        toc('propagate')
         # propagate block outputs to all downstream connected blocks
         for (port, outwires) in enumerate(b.outports): # every port
             val = out[port]
@@ -718,9 +688,9 @@ class BlockDiagram:
                     assert b.updated, 'block has incomplete inputs'
                     yd = b.deriv().flatten()
                     if not isinstance(yd, np.ndarray):
-                        raise AssertionError(f"deriv: block {b} did not return ndarray")
+                        raise AssertionError("deriv: block {} did not return ndarray".format(b))
                     if yd.ndim != 1 or yd.shape[0] != b.nstates:
-                        raise AssertionError(f"deriv: block {b} returns wrong shape {yd.shape}, should be ({b.nstates},)")
+                        raise AssertionError("deriv: block {} returns wrong shape {}, should be ({},)".format(b, yd.shape, b.nstates))
                     YD = np.r_[YD, yd]
                 except:
                     self._error_handler('deriv', b)                    

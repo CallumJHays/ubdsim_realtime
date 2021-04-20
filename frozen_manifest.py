@@ -6,7 +6,7 @@ import os
 
 print('freezing modules as as mpy')
 
-dont_freeze = os.getenv('DONT_FREEZE_MPY').split(':')
+dont_freeze = os.getenv('DONT_FREEZE_MPY', '').split(':')
 print("~~~~~~~ DONT_FREEZE_MPY =", dont_freeze)
 
 to_freeze_src = []

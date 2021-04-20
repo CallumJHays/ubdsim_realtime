@@ -4,8 +4,24 @@
 Components of the simulation system, namely blocks, wires and plugs.
 """
 
-import math
+from typing import Any, List, Optional
 import numpy as np
+
+mark_sim_only = False
+
+class simulation_only:
+    "All blocks defined within this context manager will not be run by realtime executors"
+    def __init__(self):
+        self.before = mark_sim_only
+
+    def __enter__(self):
+        global mark_sim_only
+        mark_sim_only = True
+    
+    def __exit__(self):
+        global mark_sim_only
+        mark_sim_only = self.before
+
 
 class Struct(dict):
     """
@@ -501,6 +517,7 @@ class Block:
         self._outport_names = None
         self._state_names = None
         self.initd = True
+        self._sim_only = mark_sim_only
 
         if nin is not None:
             self.nin = nin
@@ -839,6 +856,9 @@ class Block:
 
     def step(self):  # valid
         pass
+
+    def output(self, t: float) -> Optional[List[Any]]:
+        ...
 
     def savefig(self, *pos, **kwargs):
         pass
