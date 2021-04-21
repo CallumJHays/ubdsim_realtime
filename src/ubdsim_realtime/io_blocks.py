@@ -18,15 +18,17 @@ class DigitalIn(ZOH):
     
     def __init__(
         self,
-        pin: int,
         clock: Clock,
+        inp: Optional[Union[Block, Plug]] = None,
+        *,
+        pin: Optional[int] = None,
         pull: Literal["up", "down"] = "up",
-        input: Optional[Union[Block, Plug]] = None,
         **kwargs: Any
     ):
         assert pull in ("up", "down")
-        super().__init__(nin=1 if input else 0, nout=1, clock=clock, inputs=(input,) if input else (), **kwargs)
+        super().__init__(nin=1 if inp else 0, nout=1, clock=clock, inputs=(inp,) if inp else (), **kwargs)
 
+        assert pin
         self.pin = Pin(
             pin,
             Pin.IN,
@@ -40,13 +42,21 @@ class DigitalIn(ZOH):
 class DigitalOut(ZOH):
     def __init__(
         self,
-        pin: int,
         clock: Clock,
-        input: Union[Block, Plug],
+        inp: Optional[Union[Block, Plug]] = None,
         *,
+        pin: Optional[int] = None,
         **kwargs: Any
     ):
-        super().__init__(nin=1, nout=0, clock=clock, inputs=(input,), **kwargs)
+        super().__init__(
+            nin=1,
+            nout=0,
+            clock=clock,
+            inputs=(inp,) if inp else (),
+            **kwargs
+        )
+
+        assert pin # TODO
         self.pin = Pin(
             pin,
             Pin.OUT
@@ -72,10 +82,10 @@ class ADC(ZOH):
 
     def __init__(
         self,
-        pin: int,
         clock: Clock,
-        input: Optional[Union[Block, Plug]] = None,
+        inp: Optional[Union[Block, Plug]] = None,
         *,
+        pin: Optional[int] = None,
         pull: Literal["up", "down"] = "up",
         # TODO: make this more generic across uPy devices
         # currently only made for ESP32
@@ -83,9 +93,13 @@ class ADC(ZOH):
         width: int = 12,
         **kwargs: Any
     ):
-        assert 32 <= pin <= 39
+        if pin:
+            # TODO: only works for ESP32
+            assert 32 <= pin <= 39
         assert 9 <= width <= 12
-        super().__init__(nin=1 if input else 0, nout=1, inputs=(input,) if input else (), clock=clock, **kwargs)
+        super().__init__(nin=1 if inp else 0, nout=1, inputs=(inp,) if inp else (), clock=clock, **kwargs)
+
+        assert pin # TODO: sim difference etc
 
         self.adc = _ADC(Pin(
             pin,
@@ -124,17 +138,19 @@ class PWM(ZOH):
 
     def __init__(
         self,
-        duty_input: Union[Block, Plug],
         clock: Clock,
+        inp: Optional[Union[Block, Plug]] = None,
         *,
-        pin: int,
         freq: int,
+        pin: Optional[int] = None,
         **kwargs: Any
     ):
+        freq = int(freq) # convert for convenience (so 1eX can be used)
         assert 1 <= freq <= 40000000 # 1 - 40mhz
-        super().__init__(nin=1, nout=0, inputs=(duty,), clock=clock, **kwargs)
+        super().__init__(nin=1, nout=0, inputs=(inp,), clock=clock, **kwargs)
 
-        self.pwm = _PWM(Pin(pin, Pin.OUT), freq, duty)
+        assert pin #TODO: not just esp32
+        self.pwm = _PWM(Pin(pin, Pin.OUT), freq, 0)
         
     def output(self):
         # TODO: sim implementation in upstream bdsim which this subclasses and overwrites
@@ -142,4 +158,6 @@ class PWM(ZOH):
         In sim mode: returns True if high or False if low. Otherwise return None.
         Only Plant()s can be connected to this output.
         """
-        self.pwm.duty(round(self.inputs[0] * 1023))
+        self.pwm.duty(
+            round(self.inputs[0] * 1023)
+        )

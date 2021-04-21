@@ -9,6 +9,7 @@ Transfer blocks:
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
 
+from bdsim.bdsim.components import TransferBlock
 import numpy as np
 from spatialmath import base
 
@@ -155,6 +156,9 @@ class DIntegrator(ClockedBlock):
 
 # ------------------------------------------------------------------------ #
 
+# @block
+# class Z_LTI_SISO(ClockedBlock, TransferBlock):
+#     pass
 
 # @block
 # class LTI_SS(TransferBlock):

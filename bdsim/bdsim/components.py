@@ -9,7 +9,7 @@ import numpy as np
 
 mark_sim_only = False
 
-class simulation_only:
+class SimCtxManager:
     "All blocks defined within this context manager will not be run by realtime executors"
     def __init__(self):
         self.before = mark_sim_only
@@ -21,6 +21,8 @@ class simulation_only:
     def __exit__(self):
         global mark_sim_only
         mark_sim_only = self.before
+
+simulation_only = SimCtxManager()
 
 
 class Struct(dict):
