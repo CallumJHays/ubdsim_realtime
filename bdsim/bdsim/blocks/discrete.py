@@ -9,10 +9,7 @@ Transfer blocks:
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
 
-from bdsim.bdsim.components import TransferBlock
 import numpy as np
-from spatialmath import base
-
 from ..components import ClockedBlock, block
 
 # ------------------------------------------------------------------------ 
@@ -53,9 +50,9 @@ class ZOH(ClockedBlock):
         self.type = 'sampler'
         super().__init__(nin=1, nout=1, inputs=inputs, clock=clock, **kwargs)
 
-        x0 = base.getvector(x0)
-        self._x0 = x0
-        self.ndstates = len(x0)
+        
+        self._x0 = np.array(x0)
+        self.ndstates = len(self._x0)
         # print('nstates', self.nstates)
 
     def output(self, t=None):
@@ -128,7 +125,7 @@ class DIntegrator(ClockedBlock):
                 if x0.ndim > 1:
                     raise ValueError('state must be a 1D vector')
             else:
-                x0 = base.getvector(x0)
+                x0 = np.array(x0)
 
             self.ndstates = x0.shape[0]
             if min is None:

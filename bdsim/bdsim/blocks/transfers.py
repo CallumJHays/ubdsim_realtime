@@ -11,7 +11,6 @@ Transfer blocks:
 
 import numpy as np
 import math
-from spatialmath import base
 
 from ..components import TransferBlock, block
 
@@ -91,7 +90,7 @@ class Integrator(TransferBlock):
                 if x0.ndim > 1:
                     raise ValueError('state must be a 1D vector')
             else:
-                x0 = base.getvector(x0)
+                np.array(x0)
 
             self.nstates = x0.shape[0]
             if min is None:

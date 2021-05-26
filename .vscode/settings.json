@@ -22,7 +22,7 @@
   "[python]": {
     "editor.formatOnSave": false
   },
-  "python.pythonPath": "/home/cal/.conda/envs/ubdsim/bin/python",
+  "python.pythonPath": "/home/cal/.conda/envs/bdsim/bin/python",
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": false,
   "python.languageServer": "Pylance",
@@ -42,5 +42,6 @@
     "src"
   ],
   "git.ignoreSubmodules": true,
-  "git.detectSubmodules": false
+  "git.detectSubmodules": false,
+  "C_Cpp.dimInactiveRegions": false
 }

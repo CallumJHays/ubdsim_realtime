@@ -8,7 +8,9 @@ Define real-time i/o blocks for use in block diagrams.  These are blocks that:
 """
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
-from ..components import SinkBlock, SourceBlock, block
+# from typing import Optional, Tuple, Union
+# from ubdsim.blocks.discrete import ZOH
+# from ..components import Block, Clock, ClockedBlock, Plug, SinkBlock, SourceBlock, block
 
 """
 could have if/else chain here to define these classes according to the platform
@@ -27,6 +29,7 @@ sample time then update all analog blocks.  Perhaps a new kachunk method.
 
 # class _PWMOut(Sink):
 #     pass
+    
 
 # class _DigitalIn(Source):
 #     pass
