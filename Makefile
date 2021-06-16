@@ -110,12 +110,12 @@ esp32-deploy: .build-flags/esp32-deployed
 		$(make) deploy
 	touch $@
 
-esp32-test: .build-flags/esp32-deployed
+esp32-run-example-%: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "\
-		cp rlc_experiment.py /pyboard/; \
-		cp boot.py /pyboard/; \
+		cp examples/boot.py /pyboard/; \
+		cp examples/$*.py /pyboard/; \
 		cd /pyboard; \
-		repl ~ import rlc_experiment"
+		repl ~ import $*"
 
 esp32-repl: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"

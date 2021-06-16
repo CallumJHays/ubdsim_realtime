@@ -1,5 +1,5 @@
 # used by micropython module freezing / compilation
-# kinda disgusting imo but whatever.
+# kinda disgusting imo (uses eval) with injected local functions - but whatever.
 # referenced by $FROZEN_MANIFEST in micropython Makefiles
 
 import os

@@ -3,9 +3,9 @@ from typing import Any, Optional, Union
 from typing_extensions import Literal
 from machine import Pin, ADC as _ADC, PWM as _PWM
 
-from ubdsim.blocks.discrete import ZOH
-from ubdsim.blockdiagram import block
-from ubdsim.components import Block, Clock, Plug
+from bdsim.blocks.discrete import ZOH
+from bdsim.blockdiagram import block
+from bdsim.components import Block, Clock, Plug
 
 
 

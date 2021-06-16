@@ -6,7 +6,7 @@
     "firmware/micropython/": true,
     "firmware/esp-idf/": true,
     ".micropy": true,
-    "bdsim": true
+    "subrepos": true
   },
   "files.exclude": {
     "**/.git": true,
@@ -14,9 +14,10 @@
     "**/.hg": true,
     "**/CVS": true,
     "**/.DS_Store": true,
-    // "firmware/micropython": true,
+    "firmware/micropython": true,
     ".micropy": true,
-    "bdsim": true
+    "bdsim": true,
+    "subrepos": true
   },
   // don't autoformat in order to stay as close to peter's codebase as possible to make maintenance easier.
   "[python]": {
