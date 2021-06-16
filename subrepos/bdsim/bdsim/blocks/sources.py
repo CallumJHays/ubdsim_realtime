@@ -24,14 +24,14 @@ class Constant(SourceBlock):
     .. table::
        :align: left
     
-       +--------+---------+---------+
-       | inputs | outputs |  states |
-       +--------+---------+---------+
-       | 0      | 1       | 0       |
-       +--------+---------+---------+
-       |        | float,  |         | 
-       |        | A(N,)   |         |
-       +--------+---------+---------+
+    +--------+---------+---------+
+    | inputs | outputs |  states |
+    +--------+---------+---------+
+    | 0      | 1       | 0       |
+    +--------+---------+---------+
+    |        | float,  |         | 
+    |        | A(N,)   |         |
+    +--------+---------+---------+
     """
 
     def __init__(self, value=None, **kwargs):
@@ -68,13 +68,13 @@ class Time(SourceBlock):
     .. table::
        :align: left
     
-       +--------+---------+---------+
-       | inputs | outputs |  states |
-       +--------+---------+---------+
-       | 0      | 1       | 0       |
-       +--------+---------+---------+
-       |        | float   |         | 
-       +--------+---------+---------+
+    +--------+---------+---------+
+    | inputs | outputs |  states |
+    +--------+---------+---------+
+    | 0      | 1       | 0       |
+    +--------+---------+---------+
+    |        | float   |         | 
+    +--------+---------+---------+
     """
 
     def __init__(self, value=None, **kwargs):
@@ -105,13 +105,13 @@ class WaveForm(SourceBlock):
     .. table::
        :align: left
     
-       +--------+---------+---------+
-       | inputs | outputs |  states |
-       +--------+---------+---------+
-       | 0      | 1       | 0       |
-       +--------+---------+---------+
-       |        | float   |         | 
-       +--------+---------+---------+
+    +--------+---------+---------+
+    | inputs | outputs |  states |
+    +--------+---------+---------+
+    | 0      | 1       | 0       |
+    +--------+---------+---------+
+    |        | float   |         | 
+    +--------+---------+---------+
     """
 
     def __init__(self, wave='square',
@@ -170,21 +170,50 @@ class WaveForm(SourceBlock):
 
         assert 0<duty<1, 'duty must be in range [0,1]'
         
-        self.wave = wave
+        if wave in ('square', 'triangle', 'sine'):
+            self.wave = wave
+        else:
+            raise ValueError('bad waveform')
         if unit == 'Hz':
             self.freq = freq
         elif unit == 'rad/s':
             self.freq = freq / (2 * math.pi)
-        self.phase = phase
+        else:
+            raise ValueError('bad unit')
+        if 0 <= phase <= 1:
+            self.phase = phase
+        else:
+            raise ValueError('phase out of range')
         if max is not None and min is not None:
             amplitude = (max - min) / 2
             offset = (max + min) / 2 
             self.min = min
             self.mablock = max
-        self.duty = duty
+        if 0 <= duty <= 1:
+            self.duty = duty
+        else:
+            raise ValueError('duty out of range')
         self.amplitude = amplitude
         self.offset = offset
         self.type = 'waveform'
+
+    def start(self):
+        if self.wave == 'square':
+            t1 = self.phase / self.freq
+            t2 = (self.duty + self.phase) / self.freq
+        elif self.wave == 'triangle':
+            t1 = (0.25 + self.phase) / self.freq
+            t2 = (0.75 + self.phase) / self.freq
+        else:
+            return # I guess this is right ???
+
+        # t1 < t2
+        T = 1.0 / self.freq
+        while t1 < self.bd.simstate.T:
+            self.bd.simstate.declare_event(self, t1)
+            self.bd.simstate.declare_event(self, t2)
+            t1 += T
+            t2 += T
 
     def output(self, t=None):
         T = 1.0 / self.freq
@@ -223,13 +252,13 @@ class Piecewise(SourceBlock):
     .. table::
        :align: left
     
-       +--------+---------+---------+
-       | inputs | outputs |  states |
-       +--------+---------+---------+
-       | 0      | 1       | 0       |
-       +--------+---------+---------+
-       |        | float   |         | 
-       +--------+---------+---------+
+    +--------+---------+---------+
+    | inputs | outputs |  states |
+    +--------+---------+---------+
+    | 0      | 1       | 0       |
+    +--------+---------+---------+
+    |        | float   |         | 
+    +--------+---------+---------+
     """
 
     def __init__(self, *seq, **kwargs):
@@ -257,6 +286,10 @@ class Piecewise(SourceBlock):
         self.y = [ x[1] for x in seq]
         self.type = "piecewise"
 
+    def start(self):
+        for t in self.t:
+            self.bd.simstate.declare_event(self, t)
+
     def output(self, t):
         i = sum([ 1 if t >= _t else 0  for _t in self.t]) - 1
         out = self.y[i]
@@ -273,13 +306,13 @@ class Step(SourceBlock):
     .. table::
        :align: left
     
-       +--------+---------+---------+
-       | inputs | outputs |  states |
-       +--------+---------+---------+
-       | 0      | 1       | 0       |
-       +--------+---------+---------+
-       |        | float   |         | 
-       +--------+---------+---------+
+    +--------+---------+---------+
+    | inputs | outputs |  states |
+    +--------+---------+---------+
+    | 0      | 1       | 0       |
+    +--------+---------+---------+
+    |        | float   |         | 
+    +--------+---------+---------+
     """
 
     def __init__(self, T=1,
@@ -309,9 +342,68 @@ class Step(SourceBlock):
         self.on = on
         self.type = "step"
 
+    def start(self):
+        self.bd.simstate.declare_event(self, self.T)
+
     def output(self, t=None):
         if t >= self.T:
             out = self.on
+        else:
+            out = self.off
+
+        #print(out)
+        return [out]
+
+# ------------------------------------------------------------------------ #
+
+@block
+class Ramp(SourceBlock):
+    """
+    :blockname:`RAMP`
+    
+    .. table::
+       :align: left
+    
+    +--------+---------+---------+
+    | inputs | outputs |  states |
+    +--------+---------+---------+
+    | 0      | 1       | 0       |
+    +--------+---------+---------+
+    |        | float   |         | 
+    +--------+---------+---------+
+    """
+
+    def __init__(self, T=1,
+                 off=0, slope=1, 
+                 **kwargs):
+
+        """
+        :param T: time of ramp start, defaults to 1
+        :type T: float, optional
+        :param off: initial value, defaults to 0
+        :type off: float, optional
+        :param ``**kwargs``: common Block options
+        :return: a RAMP block
+        :rtype: Ramp
+        
+        Create a ramp signal block.
+
+        Output a ramp signal that starts increasing from the value ``off``
+        when time equals ``T`` linearly with time, with a gradient of ``slope``.
+        """
+        super().__init__(nout=1, **kwargs)
+        
+        self.T = T
+        self.off = off
+        self.slope = slope
+        self.type = "ramp"
+
+    def start(self):
+        self.bd.simstate.declare_event(self, self.T)
+
+    def output(self, t=None):
+        if t >= self.T:
+            out = self.off + self.slope * (t - self.T)
         else:
             out = self.off
 

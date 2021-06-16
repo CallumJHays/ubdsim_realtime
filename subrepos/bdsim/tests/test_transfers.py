@@ -58,7 +58,7 @@ class TransferTest(unittest.TestCase):
         block.inputs = [u]
         nt.assert_equal(block.deriv(), A@x  + B*u)
         nt.assert_equal(block.output()[0], C@x)
-        nt.assert_equal(block.getstate(), np.r_[30, 40])
+        nt.assert_equal(block.getstate0(), np.r_[30, 40])
         
         A=np.array([[1, 2], [3, 4]])
         B=np.array([[5], [6]])
@@ -70,13 +70,13 @@ class TransferTest(unittest.TestCase):
         block.inputs = [u]
         nt.assert_equal(block.deriv(), A@x  + B@np.r_[u])
         nt.assert_equal(block.output()[0], C@x)
-        nt.assert_equal(block.getstate(), np.r_[30, 40])
+        nt.assert_equal(block.getstate0(), np.r_[30, 40])
         
     def test_LTI_SISO(self):
         
         block = LTI_SISO( [2, 1], [2, 4, 6])
-        nt.assert_equal(block.A, np.array([[0, 1], [-2, -3]]))
-        nt.assert_equal(block.B, np.array([[0], [1]]))
+        nt.assert_equal(block.A, np.array([[-2, -3], [1, 0]]))
+        nt.assert_equal(block.B, np.array([[1], [0]]))
         nt.assert_equal(block.C, np.array([[1, 0.5]]))
     
     def test_integrator(self):
@@ -86,7 +86,7 @@ class TransferTest(unittest.TestCase):
         u = -2
         block.inputs = [u]
         nt.assert_equal(block.deriv(), u)
-        nt.assert_equal(block.getstate(), np.r_[30])
+        nt.assert_equal(block.getstate0(), np.r_[30])
 
 # ---------------------------------------------------------------------------------------#
 if __name__ == '__main__':

@@ -49,24 +49,80 @@ class Struct(dict):
         self.name = name
 
     def __setattr__(self, name, value):
+        # invoked by struct[name] = value
         if name in ['data', 'name']:
             super().__setattr__(name, value)
         else:
             self.data[name] = value
-        
+    
+    def add(self, name, value):
+        self.data[name] = value
+
     def __getattr__(self, name):
         return self.data[name]
         
-    def __str__(self):
-        return self.name + ' ' + str({k for k, v in self.data.items() if not k.startswith('_')})
-    
     def __repr__(self):
-        def fmt(k, v):
-            if isinstance(v, np.ndarray):
-                return '{:12s}| {:12s}'.format(k, type(v).__name__ + ' ' + str(v.shape)) 
+        return str(self)
+    
+    def __str__(self):
+        def fmt(k, v, indent=0):
+            if isinstance(v, Struct):
+                s = '{:12s}| {:12s}\n'.format(k, type(v).__name__)
+                for k, v in v.items():
+                    s += fmt(k, v, indent + 1)
+                return s
+            elif isinstance(v, np.ndarray):
+                s = '            > ' * indent + '{:12s}| {:12s}\n'.format(k, type(v).__name__ + ' ' + str(v.shape))
             else:
-                return '{:12s}| {:12s}'.format(k, type(v).__name__)
-        return self.name + ':\n' + '\n'.join([fmt(k,v) for k, v in self.data.items() if not k.startswith('_')])
+                s = '            > ' * indent + '{:12s}| {:12s}\n'.format(k, type(v).__name__)
+            return s
+
+        s = ''
+        for k, v in self.data.items():
+            if k.startswith('_'):
+                continue
+            s += fmt(k, v)
+
+        return self.name + ':\n' + s
+
+class PriorityQ:
+
+    def __init__(self):
+        self.q = []
+
+    def __len__(self):
+        return len(self.q)
+
+    def __str__(self):
+        return f"PriorityQ: len={len(self)}, first out {self.q[0]}"
+
+    def push(self, value):
+        self.q.append(value)
+
+    def pop(self, dt=0):
+        if len(self) == 0:
+            return None, []
+        self.q.sort(key=lambda x: x[0])
+
+        qfirst = self.q.pop(0)
+        t = qfirst[0]
+        blocks = [qfirst[1]]
+        while len(self.q) > 0 and self.q[0][0] < (t + dt):
+            blocks.append(self.q.pop(0)[1])
+        return t, blocks
+
+    def pop_until(self, t):
+        if len(self) == 0:
+            return []
+
+        self.q.sort(key=lambda x: x[0])
+        i = 0
+        while True:
+            if self.q[i][0] > t:
+                out = self.q[:i]
+                self.q = self.q[i:]
+                return out
+            i += 1
 
 class Wire:
     """
@@ -259,7 +315,7 @@ class Plug:
         """
         return len(self.portlist)
 
-    def __mul__(left, right):
+    def __rshift__(left, right):
         """
         Operator for implicit wiring.
 
@@ -272,19 +328,19 @@ class Plug:
 
         Implements implicit wiring, where the left-hand operator is a Plug, for example::
 
-            a = bike[2] * bd.GAIN(3)
+            a = bike[2] >> bd.GAIN(3)
 
         will connect port 2 of ``bike`` to the input of the GAIN block.
 
         Note that::
 
-           a = bike[2] * func[1]
+           a = bike[2] >> func[1]
 
         will connect port 2 of ``bike`` to port 1 of ``func``, and port 1 of ``func``
         will be assigned to ``a``.  To specify a different outport port on ``func``
         we need to use parentheses::
 
-            a = (bike[2] * func[1])[0]
+            a = (bike[2] >> func[1])[0]
 
         which will connect port 2 of ``bike`` to port 1 of ``func``, and port 0 of ``func``
         will be assigned to ``a``.
@@ -300,6 +356,21 @@ class Plug:
         w = s.connect(left, right)  # add a wire
         #print('plug * ' + str(w))
         return right
+
+    def __add__(self, other):
+        return self.block.bd.SUM('++', self, other)
+
+    def __sub__(self, other):
+        return self.block.bd.SUM('+-', self, other)
+
+    def __neg__(self):
+        return self.block.bd.GAIN(-1, self)
+
+    def __mul__(self, other):
+        return self.block.bd.PROD('**', self, other)
+
+    def __truediv__(self, other):
+        return self.block.bd.PROD('*/', self, other)
 
     def __setitem__(self, port, src):
         """
@@ -344,7 +415,7 @@ clocklist = []
 
 class Clock:
 
-    def __init__(self, arg, unit='s', offset=0, name=None):
+    def __init__(self, arg, unit, bd, offset=0, name=None):
         global clocklist
         if unit == 's':
             self.T = arg
@@ -358,10 +429,13 @@ class Clock:
         self.blocklist = []
 
         self.x = []  # discrete state vector numpy.ndarray
+        self.t = []
+        self.tick = 0
 
         self.name = "clock." + str(len(clocklist))
 
         clocklist.append(self)
+        self.bd = bd
 
         # events happen at time t = kT + offset
 
@@ -391,7 +465,6 @@ class Clock:
         x = np.zeros(0)
         for b in self.blocklist:
             # update dstate
-            assert b.updated, 'clocked block has incomplete inputs'
             x = np.r_[x, b.next().flatten()]
 
         return x
@@ -401,12 +474,22 @@ class Clock:
         for b in self.blocklist:
             x = b.setstate(x)  # send it to blocks        
 
-    def next(self, t):
-        # return (math.floor((t - self.offset) / self.T) + 1) * self.T + self.offset
-        k = int((t - self.offset) / self.T + 0.5)
-        return (k + 1) * self.T + self.offset
+    def start(self):
+        self.bd.state.declare_event(self, self.time(self.tick))
+        self.tick += 1
 
-    def savestate(self):
+    def next_event(self):
+        self.bd.state.declare_event(self, self.time(self.tick))
+        self.tick += 1
+
+    def time(self, i):
+        # return (math.floor((t - self.offset) / self.T) + 1) * self.T + self.offset
+        # k = int((t - self.offset) / self.T + 0.5)
+        return i * self.T + self.offset
+
+    def savestate(self, t):
+        # save clock state at time t
+        self.t.append(t)
         self.x.append(self.getstate())
 # ------------------------------------------------------------------------- #
 
@@ -498,7 +581,7 @@ class Block:
         block.nout = 0
         block.nstates = 0
         block.ndstates = 0
-
+        block._sequence = None
         return block
 
     def __init__(self, name=None, inames=None, onames=None, snames=None, pos=None, nin=None, nout=None, inputs=None, bd=None, **kwargs):
@@ -553,6 +636,10 @@ class Block:
         for k,v in self.__dict__.items():
             if k != 'sim':
                 print("  {:11s}{:s}".format(k+":", str(v)))
+
+    @property
+    def isclocked(self):
+        return self._clocked
 
     # for use in unit testing
     def _eval(self, *inputs, t=None):
@@ -663,7 +750,7 @@ class Block:
             # regular case, add attribute to the instance's dictionary
             self.__dict__[name] = value
 
-    def __mul__(left, right):
+    def __rshift__(left, right):
         """
         Operator for implicit wiring.
 
@@ -676,7 +763,7 @@ class Block:
 
         Implements implicit wiring, for example::
 
-            a = bd.CONSTANT(1) * bd.GAIN(2)
+            a = bd.CONSTANT(1) >> bd.GAIN(2)
 
         will connect the output of the CONSTANT block to the input of the
         GAIN block.  The result will be GAIN block, whose output in this case
@@ -684,18 +771,18 @@ class Block:
 
         Note that::
 
-           a = bd.CONSTANT(1) * func[1]
+           a = bd.CONSTANT(1) >> func[1]
 
         will connect port 0 of CONSTANT to port 1 of ``func``, and port 1 of ``func``
         will be assigned to ``a``.  To specify a different outport port on ``func``
         we need to use parentheses::
 
-            a = (bd.CONSTANT(1) * func[1])[0]
+            a = (bd.CONSTANT(1) >> func[1])[0]
 
         which will connect port 0 of CONSTANT ` to port 1 of ``func``, and port 0 of ``func``
         will be assigned to ``a``.
 
-        :seealso: Plug.__mul__
+        :seealso: Plug.__rshift__
 
         """
         # called for the cases:
@@ -708,6 +795,32 @@ class Block:
         return right
 
         # make connection, return a plug
+
+    def __add__(self, other):
+        name = "autosum.{:d}".format(self.bd.n_auto_sum)
+        self.bd.n_auto_sum += 1
+        return self.bd.SUM('++', self, other, name=name)
+
+    def __sub__(self, other):
+        name = "autosum.{:d}".format(self.bd.n_auto_sum)
+        self.bd.n_auto_sum += 1
+        return self.bd.SUM('+-', self, other, name=name)
+
+    def __neg__(self):
+        return self >> self.bd.GAIN(-1)
+
+    def __mul__(self, other):
+        name = "autoprod.{:d}".format(self.bd.n_auto_prod)
+        self.bd.n_auto_prod += 1
+        return self.bd.PROD('**', self, other, name=name)
+
+
+    def __truediv__(self, other):
+        name = "autoprod.{:d}".format(self.bd.n_auto_prod)
+        self.bd.n_auto_prod += 1
+        return self.bd.PROD('*/', self, other, name=name)
+
+    # TODO arithmetic with a constant, add a gain block or a constant block
 
     def __str__(self):
         if hasattr(self, 'name') and self.name is not None:
@@ -734,7 +847,7 @@ class Block:
 
         The names can include LaTeX math markup.  The LaTeX version is used
         where appropriate, but the port names are a de-LaTeXd version of the
-        given string with backslash, underscore, caret, braces and dollar signs
+        given string with backslash, caret, braces and dollar signs
         removed.
         """
         self._inport_names = names
@@ -755,7 +868,7 @@ class Block:
 
         The names can include LaTeX math markup.  The LaTeX version is used
         where appropriate, but the port names are a de-LaTeXd version of the
-        given string with backslash, underscore, caret, braces and dollar signs
+        given string with backslash, caret, braces and dollar signs
         removed.
 
         """
@@ -827,18 +940,10 @@ class Block:
         :type port: int
         :param value: Input value
         :type val: any
-        :return: If all inputs have been received
-        :rtype: bool
-
         """
         # stash it away
         self.inputs[port] = value
 
-        # check if all inputs have been assigned
-        if all([x is not None for x in self.inputs]):
-            self.updated = True
-            # self.update()
-        return self.updated
 
     def setinputs(self, *pos):
         assert len(pos) == self.nin, 'mismatch in number of inputs'
@@ -913,6 +1018,7 @@ class TransferBlock(Block):
         # return self._x
 
     def setstate(self, x):
+        x = np.array(x)
         self._x = x[:self.nstates]  # take as much state vector as we need
         return x[self.nstates:]     # return the rest
 
@@ -963,6 +1069,7 @@ class ClockedBlock(Block):
         # print('Clocked constructor')
         super().__init__(**kwargs)
         assert clock is not None, 'clocked block must have a clock'
+        self._clocked = True
         self.clock = clock
         clock.add_block(self)
 
@@ -986,8 +1093,10 @@ class ClockedBlock(Block):
         self._x = self._x0
 
 
+
 # c = Clock(5)
 # c1 = Clock(5, 2)
 
 # print(c, c1)
 # print(c.next(0), c1.next(0))
+

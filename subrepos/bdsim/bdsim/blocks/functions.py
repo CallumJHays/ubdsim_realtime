@@ -11,6 +11,7 @@ Function blocks:
 
 import numpy as np
 import math
+import inspect
 
 from ..components import FunctionBlock, block
 
@@ -29,15 +30,15 @@ class Sum(FunctionBlock):
     .. table::
        :align: left
     
-       +------------+---------+---------+
-       | inputs     | outputs |  states |
-       +------------+---------+---------+
-       | len(signs) | 1       | 0       |
-       +------------+---------+---------+
-       | float,     | float,  |         | 
-       | A(N,),     | A(N,),  |         |
-       | A(N,M)     | A(N,M)  |         | 
-       +------------+---------+---------+
+    +------------+---------+---------+
+    | inputs     | outputs |  states |
+    +------------+---------+---------+
+    | len(signs) | 1       | 0       |
+    +------------+---------+---------+
+    | float,     | float,  |         | 
+    | A(N,),     | A(N,),  |         |
+    | A(N,M)     | A(N,M)  |         | 
+    +------------+---------+---------+
     """
 
     def __init__(self, signs, *inputs, angles=False, **kwargs):
@@ -57,7 +58,24 @@ class Sum(FunctionBlock):
         The number of input ports is determined by the length of the `signs`
         string.  For example::
             
-            SUM('+-+')
+            sum = bd.SUM('+-+')
+
+        If inputs are specified then connections are automatically made::
+
+            sum = bd.SUM('++', block1, block2)
+
+        is equivalent to::
+
+            sum = bd.SUM('++')
+            bd.connect(block1, sum[0])
+            bd.connect(block2, sum[1])
+
+        The equivalent implicit summation blocks is created by::
+
+            sum = block1 + block2
+
+        which will create a summation block named "autosum.N"
+
             
         is a 3-input summing junction where ports 0 and 2 are added and
         port 1 is subtracted.
@@ -93,15 +111,15 @@ class Prod(FunctionBlock):
     .. table::
        :align: left
     
-       +------------+---------+---------+
-       | inputs     | outputs |  states |
-       +------------+---------+---------+
-       | len(ops)   | 1       | 0       |
-       +------------+---------+---------+
-       | float,     | float,  |         | 
-       | A(N,),     | A(N,),  |         |
-       | A(N,M)     | A(N,M)  |         | 
-       +------------+---------+---------+
+    +------------+---------+---------+
+    | inputs     | outputs |  states |
+    +------------+---------+---------+
+    | len(ops)   | 1       | 0       |
+    +------------+---------+---------+
+    | float,     | float,  |         | 
+    | A(N,),     | A(N,),  |         |
+    | A(N,M)     | A(N,M)  |         | 
+    +------------+---------+---------+
     """
 
     def __init__(self, ops, *inputs, matrix=False, **kwargs):
@@ -121,13 +139,27 @@ class Prod(FunctionBlock):
         The number of input ports is determined by the length of the `ops`
         string.  For example::
             
-            PROD('*/*')
+            prod = PROD('*/*')
             
         is a 3-input product junction where ports 0 and 2 are multiplied and
         port 1 is divided.
+
+        If inputs are specified then connections are automatically made::
+
+            prod = bd.PROD('*/', block1, block2)
+
+        is equivalent to::
+
+            prod = bd.PROD('*/')
+            bd.connect(block1, prod[0])
+            bd.connect(block2, prod[1])
+
+        The inputs can be scalars or NumPy arrays.  By default the ``*``
+        and ``/`` operators are used.  The flag ``matrix`` will instead use
+        ``@`` and ``@ np.linalg.inv()``.
     
         """
-        super().__init__(nin=len(ops),nout=1, inputs=inputs, **kwargs)
+        super().__init__(nin=len(ops), nout=1, inputs=inputs, **kwargs)
         assert isinstance(ops, str), 'first argument must be signs string'
         self.type = 'prod'
         assert all([x in '*/' for x in ops]), 'invalid op'
@@ -135,7 +167,7 @@ class Prod(FunctionBlock):
         self.matrix = matrix
         
     def output(self, t=None):
-        for i,input in enumerate(self.inputs):
+        for i, input in enumerate(self.inputs):
             if i == 0:
                 if self.ops[i] == '*':
                     prod = input
@@ -167,21 +199,21 @@ class Gain(FunctionBlock):
     .. table::
        :align: left
     
-       +------------+---------+---------+
-       | inputs     | outputs |  states |
-       +------------+---------+---------+
-       | 1          | 1       | 0       |
-       +------------+---------+---------+
-       | float,     | float,  |         | 
-       | A(N,),     | A(N,),  |         |
-       | A(N,M)     | A(N,M)  |         | 
-       +------------+---------+---------+
+    +------------+---------+---------+
+    | inputs     | outputs |  states |
+    +------------+---------+---------+
+    | 1          | 1       | 0       |
+    +------------+---------+---------+
+    | float,     | float,  |         | 
+    | A(N,),     | A(N,),  |         |
+    | A(N,M)     | A(N,M)  |         | 
+    +------------+---------+---------+
     """
 
-    def __init__(self, gain, *inputs, premul=False, **kwargs):
+    def __init__(self, K, *inputs, premul=False, **kwargs):
         """
-        :param gain: The gain value
-        :type gain: float
+        :param K: The gain value
+        :type K: float
         :param ``*inputs``: Optional incoming connections
         :type ``*inputs``: Block or Plug
         :param premul: premultiply by constant, default is postmultiply
@@ -192,32 +224,50 @@ class Gain(FunctionBlock):
         
         Create a gain block.
     
-        This block has only one input and one output port. The output is the
-        product of the input by the gain.
+        This block has only one input :math:`u` and one output port. The output
+        is the product of the input by the gain :math:`u K`.
+
+        If :math:`u` and ``K`` are both NumPy arrays the ``@`` operator is used.
+        To premultiply by the gain, to compute :math:`K u` use the
+        ``premul`` option.
         
         Either or both the input and gain can be numpy arrays and numpy will
         compute the appropriate product.  If both are numpy arrays then the
         matmult operator `@` is used and by default the input is postmultiplied
         by the gain, but this can be changed using the ``premul`` option.
+
+        For example::
+
+            gain = bd.GAIN(constant)
+
+        If an input is specified then connections are automatically made::
+
+            gain = bd.GAIN(constant, block1)
+
+        is equivalent to::
+
+            gain = bd.GAIN(constant)
+            bd.connect(block1, gain)
+
         """
         super().__init__(nin=1, nout=1, inputs=inputs, **kwargs)
-        self.gain  = gain
+        self.K  = K
         self.type = 'gain'
         self.premul = premul
         
     def output(self, t=None):
         input = self.inputs[0]
         
-        if isinstance(input, np.ndarray) and isinstance(self.gain, np.ndarray):
+        if isinstance(input, np.ndarray) and isinstance(self.K, np.ndarray):
             # array x array case
             if self.premul:
                 # premultiply by gain
-                return [self.gain @ input]
+                return [self.K @ input]
             else:
                 # postmultiply by gain
-                return [input @ self.gain]
+                return [input @ self.K]
         else:
-            return [self.inputs[0] * self.gain]
+            return [self.inputs[0] * self.K]
         
 # ------------------------------------------------------------------------ #
 
@@ -229,14 +279,14 @@ class Clip(FunctionBlock):
     .. table::
        :align: left
     
-       +------------+---------+---------+
-       | inputs     | outputs |  states |
-       +------------+---------+---------+
-       | 1          | 1       | 0       |
-       +------------+---------+---------+
-       | float,     | float,  |         | 
-       | A(N,)      | A(N,)   |         |
-       +------------+---------+---------+
+    +------------+---------+---------+
+    | inputs     | outputs |  states |
+    +------------+---------+---------+
+    | 1          | 1       | 0       |
+    +------------+---------+---------+
+    | float,     | float,  |         | 
+    | A(N,)      | A(N,)   |         |
+    +------------+---------+---------+
 
     """
     def __init__(self, *inputs, min=-float('inf'), max=float('inf'), **kwargs):
@@ -262,6 +312,19 @@ class Clip(FunctionBlock):
               the input vector , or
             - a vector, of the same shape as the input vector that applies elementwise to
               the input vector.
+
+        For example::
+
+            clip = bd.CLIP()
+
+        If an input is specified then a connection is automatically made::
+
+            clip = bd.CLIP(block1, args)
+
+        is equivalent to::
+
+            clip = bd.CLIP()
+            bd.connect(block1, clip)
         
         """
         super().__init__(nin=1, nout=1, inputs=inputs, **kwargs)
@@ -288,13 +351,13 @@ class Function(FunctionBlock):
     .. table::
        :align: left
     
-       +------------+---------+---------+
-       | inputs     | outputs |  states |
-       +------------+---------+---------+
-       | nin        | nout    | 0       |
-       +------------+---------+---------+
-       | any        | any     |         | 
-       +------------+---------+---------+
+    +------------+---------+---------+
+    | inputs     | outputs |  states |
+    +------------+---------+---------+
+    | nin        | nout    | 0       |
+    +------------+---------+---------+
+    | any        | any     |         | 
+    +------------+---------+---------+
  
     """
 
@@ -314,7 +377,7 @@ class Function(FunctionBlock):
         :type args: tuple, optional
         :param kwargs: extra keyword arguments passed to the function, defaults to {}
         :type kwargs: dict, optional
-        :param ``**kwargs``: common Block options
+        :param ``**kwargs_``: common Block options
         :return: A FUNCTION block
         :rtype: _Function
     
@@ -359,6 +422,21 @@ class Function(FunctionBlock):
                 return [ u1+u2, u1*u2 ]
             
             FUNCTION( myfun, nin=2, nout=2)
+
+        For example::
+
+            func = bd.FUNCTION(myfun, kwargs)
+
+        If inputs are specified then connections are automatically made and
+        are assigned to sequential input ports::
+
+            func = bd.FUNCTION(myfun, block1, block2, kwargs)
+
+        is equivalent to::
+
+            func = bd.FUNCTION(myfun, kwargs)
+            bd.connect(block1, func[0])
+            bd.connect(block2, func[1])
         """
         super().__init__(nin=nin, nout=nout, inputs=inputs, **kwargs_)
         self.nin = nin
@@ -370,21 +448,31 @@ class Function(FunctionBlock):
                 if kwargs is None:
                     # we can check the number of arguments
                     n = len(inspect.signature(func).parameters)
-                    assert nin + len(args) == n, 'argument count mismatch'
+                    if nin + len(args) != n:
+                        raise ValueError('argument count mismatch')
             self.nout = len(func)
         elif callable(func):
-            if kwargs is None:
+            if len(kwargs) == 0:
                 # we can check the number of arguments
                 n = len(inspect.signature(func).parameters)
-                assert nin + len(args) == n, 'argument count mismatch'
+                if nin + len(args) != n:
+                    raise ValueError('argument count mismatch')
             self.nout = nout
             
         self.func  = func
         if dict:
             self.userdata = {}
             args += (self.userdata,)
+        else:
+            self.userdata = None
         self.args = args
         self.kwargs = kwargs
+
+    def start(self):
+        super().start()
+        if self.userdata is not None:
+            self.userdata.clear()
+            print('clearing user data')
 
     def output(self, t=None):
         if callable(self.func):
@@ -420,13 +508,13 @@ class Interpolate(FunctionBlock):
     .. table::
        :align: left
     
-       +------------+---------+---------+
-       | inputs     | outputs |  states |
-       +------------+---------+---------+
-       | 0 or 1     | 1       | 0       |
-       +------------+---------+---------+
-       | float      | any     |         | 
-       +------------+---------+---------+
+    +------------+---------+---------+
+    | inputs     | outputs |  states |
+    +------------+---------+---------+
+    | 0 or 1     | 1       | 0       |
+    +------------+---------+---------+
+    | float      | any     |         | 
+    +------------+---------+---------+
     """
 
     def __init__(self, *inputs, x=None, y=None, xy=None, time=False, kind='linear', **kwargs):
