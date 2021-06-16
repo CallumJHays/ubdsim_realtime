@@ -1,25 +1,17 @@
 
-from machine import ADC, PWM, Pin, Timer, UART, freq
+from machine import ADC, PWM, Pin, Timer, UART
+from ubdsim import BlockDiagram
+import ubdsim_realtime
 
-# set frequency to highest possible w/ ESP32
-freq(240_000_000)
+bd = BlockDiagram()
 
-from micropython import const, schedule
-
-# How often update() is called
-OPERATING_FREQ = const(50) # 50hz
-OPERATING_PERIOD = const(1000 // OPERATING_FREQ) # 20ms
-
-PWM_FREQ = 1024
-
-pwm_1 = PWM(Pin(23, Pin.OUT), freq=PWM_FREQ)
-adc_1 = ADC(Pin(36, Pin.IN), atten=ADC.ATTN_11DB, width=ADC.WIDTH_12BIT)
-
-pwm_2 = PWM(Pin(22, Pin.OUT), freq=PWM_FREQ)
-adc_2 = ADC(Pin(39, Pin.IN))
+clock = bd.clock(50, 'Hz')
 
 
-from utime import ticks_us
+uart = UART(0, 115200)
+uart.init(115200, bits=9, parity=None, stop=1)
+sender = bd.DATASENDER(uart, clock=clock)
+
 
 # send data over the wire
 # uart = UART(0, 115200)

@@ -48,7 +48,7 @@ unix-repl: .build-flags/unix
 unix-test: .build-flags/unix
 	# MICROPYPATH="" fixes a weird import issue
 	# https://github.com/micropython/micropython/issues/2322#issuecomment-277845841
-	MICROPYPATH="" $(micropython) test_ubdsim.py
+	MICROPYPATH="" $(micropython) rlc_experiment.py
 
 
 .build-flags/unix-unfrozen: .build-flags/qstr-defs
@@ -58,7 +58,7 @@ unix-test: .build-flags/unix
 unix-unfrozen-test: .build-flags/unix-unfrozen
 	# MICROPYPATH="" fixes a weird import issue
 	# https://github.com/micropython/micropython/issues/2322#issuecomment-277845841
-	MICROPYPATH="src:.upip-deps" $(micropython) test_ubdsim.py
+	MICROPYPATH="src:.upip-deps" $(micropython) rlc_experiment.py
 
 
 esp32-clean-mpy:
@@ -67,7 +67,7 @@ esp32-clean-mpy:
 
 # esp32 port
 esp32: .build-flags/esp32
-.build-flags/esp32: .build-flags/qstr-defs .build-flags/src-code frozen_manifest.py esp32-clean-mpy
+.build-flags/esp32: .build-flags/qstr-defs .build-flags/src-code frozen_manifest.py
 	cd ${ESPIDF} && \
 		git submodule sync --recursive && \
 		git submodule update --init --recursive && \
@@ -105,14 +105,17 @@ esp32-deploy: .build-flags/esp32-deployed
 		# allocate more partition space to ROM over FS \
 		cp ${here}/esp32_partitions.csv ./partitions.csv && \
 		\
+		export BOARD=GENERIC && \
+		export FROZEN_MANIFEST_INCLUDE=$$(pwd)/boards/manifest.py && \
 		$(make) deploy
 	touch $@
 
 esp32-test: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "\
-		cp test_ubdsim.py /pyboard/; \
+		cp rlc_experiment.py /pyboard/; \
+		cp boot.py /pyboard/; \
 		cd /pyboard; \
-		repl ~ import test_ubdsim"
+		repl ~ import rlc_experiment"
 
 esp32-repl: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"
@@ -125,9 +128,10 @@ esp32-repl: .build-flags/esp32-deployed
 esp32-unfrozen-test: .build-flags/esp32-unfrozen-deployed
 	rshell -p /dev/ttyUSB0 "\
 		rsync src/ubdsim_realtime /pyboard/lib/ubdsim_realtime; \
-		cp test_ubdsim.py /pyboard/; \
+		cp rlc_experiment.py /pyboard/; \
+		cp boot.py /pyboard/; \
 		cd /pyboard; \
-		repl ~ from test_ubdsim import test ~ test()"
+		repl ~ from rlc_experiment import test ~ test()"
 
 esp32-unfrozen-repl: .build-flags/esp32-unfrozen-deployed
 	rshell -p /dev/ttyUSB0 "\

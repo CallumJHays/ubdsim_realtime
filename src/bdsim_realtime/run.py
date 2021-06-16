@@ -1,14 +1,16 @@
 import utime
-from typing import List, Optional, Set
+from typing import List, Optional
 
 from ubdsim import Block, BlockDiagram, TransferBlock
 from ubdsim.state import BDSimState
 import gc
 
 def run(bd: BlockDiagram, max_time: Optional[float]=None):
-
     state = bd.state = BDSimState()
     state.T = max_time
+
+    for clock in bd.clocklist:
+        
 
     for b in bd.blocklist:
         assert not isinstance(b, TransferBlock), \
@@ -70,7 +72,7 @@ def run(bd: BlockDiagram, max_time: Optional[float]=None):
         t_us = utime.ticks_us()
         dt_us = utime.ticks_diff(t_us, last_t_us)
         assert dt_us > 0
-        dt = dt_us / 1e6
+        dt = dt_us * 1e-6
         state.t += dt
 
         for b in plan:
