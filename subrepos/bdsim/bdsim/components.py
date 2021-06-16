@@ -94,7 +94,7 @@ class PriorityQ:
         return len(self.q)
 
     def __str__(self):
-        return f"PriorityQ: len={len(self)}, first out {self.q[0]}"
+        return "PriorityQ: len={}, first out {}".format(len(self), self.q[0])
 
     def push(self, value):
         self.q.append(value)

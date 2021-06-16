@@ -2,7 +2,6 @@
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
-    "**/node_modules/**": true,
     "firmware/micropython/": true,
     "firmware/esp-idf/": true,
     ".micropy": true,
@@ -15,6 +14,7 @@
     "**/CVS": true,
     "**/.DS_Store": true,
     "firmware/micropython": true,
+    "firmware/esp-idf/": true,
     ".micropy": true,
     "bdsim": true,
     "subrepos": true

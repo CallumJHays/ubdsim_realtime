@@ -11,7 +11,6 @@ Function blocks:
 
 import numpy as np
 import math
-import inspect
 
 from ..components import FunctionBlock, block
 
@@ -445,18 +444,8 @@ class Function(FunctionBlock):
         if isinstance(func, (list, tuple)):
             for f in func:
                 assert callable(f), 'Function must be a callable'
-                if kwargs is None:
-                    # we can check the number of arguments
-                    n = len(inspect.signature(func).parameters)
-                    if nin + len(args) != n:
-                        raise ValueError('argument count mismatch')
             self.nout = len(func)
         elif callable(func):
-            if len(kwargs) == 0:
-                # we can check the number of arguments
-                n = len(inspect.signature(func).parameters)
-                if nin + len(args) != n:
-                    raise ValueError('argument count mismatch')
             self.nout = nout
             
         self.func  = func

@@ -465,15 +465,16 @@ class BlockDiagram:
 
                 # check that output is a list of correct length
                 if not isinstance(out, list):
-                    raise AssertionError(f"block {b} output {b} must be a list: {type(out)}")
+                    raise AssertionError("block {b} output {b} must be a list: {t}".format(b=b, t=type(out)))
                 if len(out) != b.nout:
-                    raise AssertionError(f"block {b} output {b} has incorrect length: {len(out)} instead of {b.nout}")
+                    raise AssertionError("block {b} output {b} has incorrect length: {l} instead of {b}" \
+                        .format(b=b, l=len(out), n=b.nout))
 
                 # TODO check output validity once at the start
                 
                 # check it has no nan or inf values
                 if checkfinite and isinstance(out, (int, float, np.ndarray)) and not np.isfinite(out).any():
-                    raise RuntimeError(f"block {b} output contains NaN")
+                    raise RuntimeError("block {} output contains NaN".format(b))
 
                 # send block outputs to all downstream connected blocks
                 for (port, outwires) in enumerate(b.outports): # every port

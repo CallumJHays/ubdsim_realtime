@@ -120,30 +120,11 @@ esp32-run-example-%: .build-flags/esp32-deployed
 esp32-repl: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"
 
-.build-flags/esp32-unfrozen-deployed:
-	export DONT_FREEZE_MPY=src/ubdsim_realtime && \
-		$(make) esp32-deploy
-	touch $@
-
-esp32-unfrozen-test: .build-flags/esp32-unfrozen-deployed
-	rshell -p /dev/ttyUSB0 "\
-		rsync src/ubdsim_realtime /pyboard/lib/ubdsim_realtime; \
-		cp rlc_experiment.py /pyboard/; \
-		cp boot.py /pyboard/; \
-		cd /pyboard; \
-		repl ~ from rlc_experiment import test ~ test()"
-
-esp32-unfrozen-repl: .build-flags/esp32-unfrozen-deployed
-	rshell -p /dev/ttyUSB0 "\
-		rsync src/ubdsim_realtime /pyboard/lib/ubdsim_realtime; \
-		cd /pyboard; \
-		repl"
-
 
 # all these source files must be mpy-cross-compiled into bytecode
 # and then frozen as c code so that the libraries are stored in ROM
-UBDSIM_PY_SRC=$(call _rwildcard,ubdsim,*.py)
-UBDSIM_RT_PY_SRC=$(call _rwildcard,ubdsim_realtime,*.py)
+UBDSIM_PY_SRC=$(shell find -L src/bdsim -name '*.py')
+UBDSIM_RT_PY_SRC=$(shell find -L src/bdsim_realtime -name '*.py')
 
 # all the bytecode from ubdsim and ubdsim_realtime
 dist: _src-code _mpy-cross
@@ -161,7 +142,7 @@ dist: _src-code _mpy-cross
 	cd firmware/bytecode && \
 		python3 setup.py sdist
 
-.build-flags/src-code: $(wildcard src/**/*.py)
+.build-flags/src-code: $(UBDSIM_PY_SRC) $(UBDSIM_RT_PY_SRC)
 	touch $@
 
 # cross-compiled micropython bytecode
