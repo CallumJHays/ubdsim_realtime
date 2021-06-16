@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:CallumJHays/bdsim_realtime.git
+	branch = main
+	commit = 9ce0381019880d804586f223390b9746fc48dae2
+	parent = b31d225ee97d75f468f1a57c4a4e19a845339efa
+	method = merge
+	cmdver = 0.4.3
