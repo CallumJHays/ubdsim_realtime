@@ -42,3 +42,4 @@ Timer(0).init(
     period=OPERATING_PERIOD,
     callback=lambda _: schedule(update, None)
 )
+Timer(0).deinit()

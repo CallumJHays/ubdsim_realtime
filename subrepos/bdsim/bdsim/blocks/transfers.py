@@ -11,7 +11,7 @@ Transfer blocks:
 
 from typing import List
 import numpy as np
-import scipy.signal
+# import scipy.signal
 import math
 
 from ..components import TransferBlock, block
@@ -94,7 +94,7 @@ class Integrator(TransferBlock):
             else:
                 np.array(x0)
 
-            self.nstates = x0.shape[0]
+            self.nstates = x0.shape()[0]
             if min is None:
                 min = [-math.inf] * self.nstates
             elif len(min) != self.nstates:
@@ -111,14 +111,10 @@ class Integrator(TransferBlock):
         print('nstates', self.nstates)
 
     def output(self, t=None):
-        return [self._x]
+        raise NotImplementedError()
 
     def deriv(self):
-        xd = np.array(self.inputs)
-        for i in range(0, self.nstates):
-            if self._x[i] < self.min[i] or self._x[i] > self.max[i]:
-                xd[i] = 0
-        return xd
+        raise NotImplementedError()
 
 # ------------------------------------------------------------------------ #
 
@@ -179,22 +175,22 @@ class LTI_SS(TransferBlock):
         #print('in SS constructor')
         self.type = 'LTI SS'
 
-        assert A.shape[0] == A.shape[1], 'A must be square'
-        n = A.shape[0]
-        if len(B.shape) == 1:
+        assert A.shape()[0] == A.shape()[1], 'A must be square'
+        n = A.shape()[0]
+        if len(B.shape()) == 1:
             nin = 1
             B = B.reshape((n, 1))
         else:
-            nin = B.shape[1]
-        assert B.shape[0] == n, 'B must have same number of rows as A'
+            nin = B.shape()[1]
+        assert B.shape()[0] == n, 'B must have same number of rows as A'
 
-        if len(C.shape) == 1:
+        if len(C.shape()) == 1:
             nout = 1
-            assert C.shape[0] == n, 'C must have same number of columns as A'
+            assert C.shape()[0] == n, 'C must have same number of columns as A'
             C = C.reshape((1, n))
         else:
-            nout = C.shape[0]
-            assert C.shape[1] == n, 'C must have same number of columns as A'
+            nout = C.shape()[0]
+            assert C.shape()[1] == n, 'C must have same number of columns as A'
 
         super().__init__(inputs=inputs, nin=nin, nout=nout, **kwargs)
 
@@ -202,7 +198,7 @@ class LTI_SS(TransferBlock):
         self.B = B
         self.C = C
 
-        self.nstates = A.shape[0]
+        self.nstates = A.shape()[0]
 
         if x0 is None:
             self._x0 = np.zeros((self.nstates,))
@@ -210,10 +206,10 @@ class LTI_SS(TransferBlock):
             self._x0 = x0
 
     def output(self, t=None):
-        return list(self.C @ self._x)
+        raise NotImplementedError()
 
     def deriv(self):
-        return self.A @ self._x + self.B @ np.array(self.inputs)
+        raise NotImplementedError()
 # ------------------------------------------------------------------------ #
 
 
@@ -277,42 +273,43 @@ class LTI_SISO(LTI_SS):
 
 
 def siso_to_ss(N: List[float], D: List[float], verbose: bool = False):
-    if not isinstance(N, list):
-        N = [N]
-    if not isinstance(D, list):
-        D = [D]
-    n = len(D) - 1
-    nn = len(N)
-    assert nn <= n, 'direct pass through is not supported'
+    return tuple(np.array([0]) for _ in range(3))
+    # if not isinstance(N, list):
+    #     N = [N]
+    # if not isinstance(D, list):
+    #     D = [D]
+    # n = len(D) - 1
+    # nn = len(N)
+    # assert nn <= n, 'direct pass through is not supported'
 
-    # convert to numpy arrays
-    N = np.r_[np.zeros((len(D) - len(N),)), np.array(N)]
-    D = np.array(D)
+    # # convert to numpy arrays
+    # N = np.r_[np.zeros((len(D) - len(N),)), np.array(N)]
+    # D = np.array(D)
 
-    # normalize so leading coefficient of denominator is one
-    # D0 = D[0]
-    # D = D / D0
-    # N = N / D0
+    # # normalize so leading coefficient of denominator is one
+    # # D0 = D[0]
+    # # D = D / D0
+    # # N = N / D0
 
-    # A = np.eye(len(D) - 1, k=1)  # control canonic (companion matrix) form
-    # A[-1, :] = -D[1:]
+    # # A = np.eye(len(D) - 1, k=1)  # control canonic (companion matrix) form
+    # # A[-1, :] = -D[1:]
 
-    # B = np.zeros((n, 1))
-    # B[-1] = 1
+    # # B = np.zeros((n, 1))
+    # # B[-1] = 1
+
+    # # C = (N[1:] - N[0] * D[1:]).reshape((1, n))
+
+    # A, B, C, D = scipy.signal.tf2ss(N, D)
+
+    # if len(np.flatnonzero(D)) > 0:
+    #     raise ValueError('D matrix is not zero')
 
     # C = (N[1:] - N[0] * D[1:]).reshape((1, n))
 
-    A, B, C, D = scipy.signal.tf2ss(N, D)
+    # if verbose:
+    #     print('A=', A)
+    #     print('B=', B)
+    #     print('C=', C)
 
-    if len(np.flatnonzero(D)) > 0:
-        raise ValueError('D matrix is not zero')
-
-    C = (N[1:] - N[0] * D[1:]).reshape((1, n))
-
-    if verbose:
-        print('A=', A)
-        print('B=', B)
-        print('C=', C)
-
-    return A, B, C
+    # return A, B, C
 

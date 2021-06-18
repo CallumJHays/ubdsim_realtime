@@ -88,7 +88,14 @@ class Sum(FunctionBlock):
         
         
     def output(self, t=None):
+
+
         for i,input in enumerate(self.inputs):
+            # in ulab, __radd__ hasn't been implemented for np.ndarray with regular numbers
+            # so we normalize all inputs to be numpy arrays
+            if not isinstance(input, np.ndarray):
+                input = np.ndarray([input])
+
             if self.signs[i] == '-':
                 input = -input
             if i == 0:
@@ -561,7 +568,7 @@ class Interpolate(FunctionBlock):
             # process separate x and y vectors
             x = np.array(x)
             y = np.array(y)
-            assert x.shape[0] == y.shape[0], 'x and y data must be same length'
+            assert x.shape()[0] == y.shape()[0], 'x and y data must be same length'
         else:
             # process mixed xy data
             if isinstance(xy, (list, tuple)):

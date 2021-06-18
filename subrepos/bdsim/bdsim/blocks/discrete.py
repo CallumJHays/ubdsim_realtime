@@ -20,7 +20,7 @@ from ..components import Clock, ClockedBlock, block
 @block
 class ZOH(ClockedBlock):
 
-    def __init__(self, clock, *inputs, x0=0, min=None, max=None, **kwargs):
+    def __init__(self, clock, *inputs, x0=[0], min=None, max=None, **kwargs):
         """
         :param ``*inputs``: Optional incoming connections
         :type ``*inputs``: Block or Plug
@@ -51,7 +51,6 @@ class ZOH(ClockedBlock):
         """
         self.type = 'sampler'
         super().__init__(nin=1, nout=1, inputs=inputs, clock=clock, **kwargs)
-
         
         self._x0 = np.array(x0)
         self.ndstates = len(self._x0)
@@ -117,9 +116,9 @@ class DIntegrator(ClockedBlock):
         if isinstance(x0, (int, float)):
             self.ndstates = 1
             if min is None:
-                min = -math.inf
+                min = -np.inf
             if max is None:
-                max = math.inf
+                max = np.inf
 
         else:
             if isinstance(x0, np.ndarray):
@@ -128,28 +127,27 @@ class DIntegrator(ClockedBlock):
             else:
                 x0 = np.array(x0)
 
-            self.ndstates = x0.shape[0]
+            self.ndstates = x0.shape()[0]
             if min is None:
-                min = [-math.inf] * self.nstates
+                min = [-np.inf] * self.nstates
             elif len(min) != self.nstates:
                 raise ValueError('minimum bound length must match x0')
 
             if max is None:
-                max = [math.inf] * self.nstates
+                max = [np.inf] * self.nstates
             elif len(max) != self.nstates:
                 raise ValueError('maximum bound length must match x0')
 
         self._x0 = np.r_[x0]
         self.min = np.r_[min]
         self.max = np.r_[max]
-        self.gain = gain
-        print('nstates', self.nstates)
+        self.gain = np.r_[gain]
 
     def output(self, t=None):
         return [self._x]
 
     def next(self):
-        xnext = self._x + self.gain * self.clock.T * np.array(self.inputs[0])
+        xnext = self._x + self.gain * self.clock.T * np.array(self.inputs)
         return xnext
 
 # ------------------------------------------------------------------------ #

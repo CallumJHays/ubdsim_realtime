@@ -797,7 +797,7 @@ array, while the methods return a new array-like object.
 4.  `.flatten <#.flatten>`__
 5.  `.itemsize <#.itemsize>`__
 6.  `.reshape <#.reshape>`__
-7.  `.shape <#.shape>`__
+7.  `.shape() <#.shape()>`__
 8.  `.size <#.size>`__
 9.  `.transpose <.#transpose>`__
 10. `.sort <#.sort>`__
@@ -1115,13 +1115,13 @@ consistent with the old, a ``ValueError`` exception will be raised.
     
 
 
-.shape
+.shape()
 ~~~~~~
 
 ``numpy``:
-https://numpy.org/doc/stable/reference/generated/numpy.ndarray.shape.html
+https://numpy.org/doc/stable/reference/generated/numpy.ndarray.shape().html
 
-The ``.shape`` method (property) returns a tuple with the length of the
+The ``.shape()`` method (property) returns a tuple with the length of the
 array in along each dimension.
 
 **WARNING:** In ``circuitpython``, you can call the method as a
@@ -1135,11 +1135,11 @@ property, i.e.,
     
     a = np.array([1, 2, 3, 4], dtype=np.int8)
     print("a:\n", a)
-    print("shape of a:", a.shape)
+    print("shape of a:", a.shape())
     
     b= np.array([[1, 2], [3, 4]], dtype=np.int8)
     print("\nb:\n", b)
-    print("shape of b:", b.shape
+    print("shape of b:", b.shape()
 
 .. parsed-literal::
 

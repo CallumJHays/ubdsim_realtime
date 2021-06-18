@@ -117,10 +117,11 @@ class BlockDiagram:
             )[:3]
             
             raise Exception(
-                'Could not find an BlockDiagram.attr or a block by the name "{}".\n'
+                'Could not find a BlockDiagram.attr or a block by the name "{}".\n'
                 'Please check your spelling. The most similar block names are: {}.\n'
-                'If none of those look correct, check that your block library has been correctly imported.'
-                .format(name, closest_3_blocknames)
+                'All known blocks are: {}\n'
+                'If your block is missing, check that your block library has been correctly imported.'
+                .format(name, closest_3_blocknames, list(self.block_classes.keys()))
             )
     
     def __str__(self):
@@ -268,15 +269,9 @@ class BlockDiagram:
         
         # connect the source and destination blocks to each wire
         for w in self.wirelist:
-            try:
-                w.start.block.add_outport(w)
-                w.end.block.add_inport(w)
-
-                w.end.block._parents[w.end.port] = w.start.block
-
-            except:
-                print('error connecting wire ', w.fullname + ': ', sys.exc_info()[1])
-                error = True
+            w.start.block.add_outport(w)
+            w.end.block.add_inport(w)
+            w.end.block._parents[w.end.port] = w.start.block
             
         # check connections every block 
         for b in self.blocklist:
@@ -645,8 +640,6 @@ class BlockDiagram:
             elif cmd[0] == 't':
                 self.t_stop = float(cmd[1:])
                 break
-            elif cmd[0] == 'q':
-                sys.exit(1)
             elif cmd[0] in 'h?':
                 print("p    print all outputs")
                 print("i    print integrator status")
@@ -696,7 +689,7 @@ class BlockDiagram:
                 value = w.end.block.inputs[w.end.port]
                 typ = type(value).__name__
                 if isinstance(value, np.ndarray):
-                    typ += ' {:s}'.format(str(value.shape))
+                    typ += ' {:s}'.format(str(value.shape()))
             except:
                 typ = '??'
             table.row( w.id, start, end, w.fullname, typ)
@@ -725,29 +718,10 @@ class BlockDiagram:
         if not self.compiled:
             print('** System has not been compiled, or had a compile time error')
 
-    # ---------------------------------------------------------------------- #
-
-    def _error_handler(self, where, block):
-        import sys
-        err = sys.exc_info()  # get the exception
-
-        print(colored.fg('red'))
-        print("[{}]: exception {} occurred in {} block {}  ".format(where, err[0].__name__, block.type, block.name))
-        print(">>>> {}\n".format(err[1]))
-        print(colored.attr(0))
-        raise RuntimeError('Fatal failure')
-
     def getstate0(self):
         # get the state from each stateful block
-
-        x0 = np.zeros(0)
-        for b in self.blocklist:
-            try:
-                if b.blockclass == 'transfer':
-                    x0 = np.r_[x0, b.getstate0()]
-            except:
-                self._error_handler('getstate0', b)
-        return x0
+        parts = tuple(b.getstate0() for b in self.blocklist if b.blockclass == "transfer")
+        return np.concatenate(parts) if parts else np.zeros(0)
                         
     def reset(self):
         """
@@ -758,10 +732,7 @@ class BlockDiagram:
 
         """
         for b in self.blocklist:
-            try:
-                b.reset()     
-            except:
-                self._error_handler('reset', b)
+            b.reset()
 
     def step(self):
         """
@@ -771,11 +742,8 @@ class BlockDiagram:
         # TODO could be done by output method, even if no outputs
         
         for b in self.blocklist:
-            try:
-                b.step()
-                self.simstate.count += 1
-            except:
-                self._error_handler('step', b)
+            b.step()
+            self.simstate.count += 1
 
     def deriv(self):
         """
@@ -784,15 +752,12 @@ class BlockDiagram:
         YD = np.zeros(0)
         for b in self.blocklist:
             if b.blockclass == 'transfer':
-                try:
-                    yd = b.deriv().flatten()
-                    if not isinstance(yd, np.ndarray):
-                        raise AssertionError("deriv: block {} did not return ndarray".format(b))
-                    if yd.ndim != 1 or yd.shape[0] != b.nstates:
-                        raise AssertionError("deriv: block {} returns wrong shape {}, should be ({},)".format(b, yd.shape, b.nstates))
-                    YD = np.r_[YD, yd]
-                except:
-                    self._error_handler('deriv', b)                    
+                yd = b.deriv().flatten()
+                if not isinstance(yd, np.ndarray):
+                    raise AssertionError("deriv: block {} did not return ndarray".format(b))
+                if yd.ndim != 1 or yd.shape()[0] != b.nstates:
+                    raise AssertionError("deriv: block {} returns wrong shape {}, should be ({},)".format(b, yd.shape(), b.nstates))
+                YD = np.r_[YD, yd]
         return YD
 
     def start(self, **kwargs):
@@ -803,14 +768,11 @@ class BlockDiagram:
         Invokes the `start` method on all blocks.
         
         """
-        for c in self.clocklist:
-            c.start(**kwargs)
+        # for c in self.clocklist:
+        #     c.start(**kwargs)
 
         for b in self.blocklist:
-            try:
-                b.start(**kwargs)
-            except:
-                self._error_handler('start block', b)
+            b.start(**kwargs)
                 
     def initialstate(self):
         for b in self.blocklist:
@@ -826,10 +788,7 @@ class BlockDiagram:
         
         """
         for b in self.blocklist:
-            try:
-                b.done(**kwargs)
-            except:
-                self._error_handler('done', b)
+            b.done(**kwargs)
         
     def dotfile(self, filename):
         """
@@ -894,7 +853,7 @@ class BlockDiagram:
             print('  outputs: ', b.output(t=0))
 
     def DEBUG(self, debug, *args):
-        if debug[0] in self.options.debug:
+        if self.options and debug[0] in self.options.debug:
             print('DEBUG.{:s}: '.format(debug), *args)
 
 

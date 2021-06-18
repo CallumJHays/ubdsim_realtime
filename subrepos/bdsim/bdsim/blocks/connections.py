@@ -15,12 +15,10 @@ Connection blocks are in two categories:
 
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
-import importlib.util
+# import importlib.util
 import numpy as np
-import copy
 
-from ..blockdiagram import BlockDiagram
-from ..components import SubsystemBlock, SourceBlock, SinkBlock, FunctionBlock, block
+from ..components import SubsystemBlock, FunctionBlock, block
 
 # ------------------------------------------------------------------------ #
 @block
@@ -284,60 +282,61 @@ class SubSystem(SubsystemBlock):
           from the number of ports on the ``InPort`` and ``OutPort`` blocks within the
           subsystem.
         """
-        super().__init__(inputs=inputs, **kwargs)
-        self.type = 'subsystem'
+        raise NotImplementedError()
+        # super().__init__(inputs=inputs, **kwargs)
+        # self.type = 'subsystem'
         
-        if isinstance(subsys, str):
-            # attempt to import the file
-            try:
-                module = importlib.import_module(subsys, package='.')
-            except SyntaxError:
-                print('-- syntax error in block definiton: ' + subsys)
-            except ModuleNotFoundError:
-                print('-- module not found ', subsys)
-            # get all the bdsim.BlockDiagram instances
-            simvars = [name for name, ref in module.__dict__.items() if isinstance(ref, bdsim.BlockDiagram)]
-            if len(simvars) == 0:
-                raise ImportError('no bdsim.Simulation instances in imported module')
-            elif len(simvars) > 1:
-                raise ImportError('multiple bdsim.Simulation instances in imported module' + str(simvars))
-            subsys = module.__dict__[simvars[0]]
-            self.ssvar = simvars[0]
-        elif isinstance(subsys, BlockDiagram):
-            # use an in-memory digram
-            self.ssvar = None
-        else:
-            raise ValueError('argument must be filename or BlockDiagram instance')
+        # if isinstance(subsys, str):
+        #     # attempt to import the file
+        #     try:
+        #         module = importlib.import_module(subsys, package='.')
+        #     except SyntaxError:
+        #         print('-- syntax error in block definiton: ' + subsys)
+        #     except ModuleNotFoundError:
+        #         print('-- module not found ', subsys)
+        #     # get all the bdsim.BlockDiagram instances
+        #     simvars = [name for name, ref in module.__dict__.items() if isinstance(ref, bdsim.BlockDiagram)]
+        #     if len(simvars) == 0:
+        #         raise ImportError('no bdsim.Simulation instances in imported module')
+        #     elif len(simvars) > 1:
+        #         raise ImportError('multiple bdsim.Simulation instances in imported module' + str(simvars))
+        #     subsys = module.__dict__[simvars[0]]
+        #     self.ssvar = simvars[0]
+        # elif isinstance(subsys, BlockDiagram):
+        #     # use an in-memory digram
+        #     self.ssvar = None
+        # else:
+        #     raise ValueError('argument must be filename or BlockDiagram instance')
 
-        # check if valid input and output ports
-        ninp = 0
-        noutp = 0
-        for b in subsys.blocklist:
-            if b.type == 'inport':
-                ninp += 1
-            elif b.type == 'outport':
-                noutp += 1
+        # # check if valid input and output ports
+        # ninp = 0
+        # noutp = 0
+        # for b in subsys.blocklist:
+        #     if b.type == 'inport':
+        #         ninp += 1
+        #     elif b.type == 'outport':
+        #         noutp += 1
         
-        if ninp > 1:
-            raise ValueError('subsystem cannot have more than one INPORT block')
-        if noutp > 1:
-            raise ValueError('subsystem cannot have more than one OUTPORT block')
-        if ninp + noutp == 0:
-            raise ValueError('subsystem cannot have zero INPORT or OUTPORT blocks')
+        # if ninp > 1:
+        #     raise ValueError('subsystem cannot have more than one INPORT block')
+        # if noutp > 1:
+        #     raise ValueError('subsystem cannot have more than one OUTPORT block')
+        # if ninp + noutp == 0:
+        #     raise ValueError('subsystem cannot have zero INPORT or OUTPORT blocks')
 
-        # it's valid, make a deep copy
-        self.subsystem = copy.deepcopy(subsys)
+        # # it's valid, make a deep copy
+        # self.subsystem = copy.deepcopy(subsys)
 
-        # get references to the input and output port blocks
-        self.inport = None
-        self.outport = None
-        for b in self.subsystem.blocklist:
-            if b.type == 'inport':
-                self.inport = b
-            elif b.type == 'outport':
-                self.outport = b
+        # # get references to the input and output port blocks
+        # self.inport = None
+        # self.outport = None
+        # for b in self.subsystem.blocklist:
+        #     if b.type == 'inport':
+        #         self.inport = b
+        #     elif b.type == 'outport':
+        #         self.outport = b
 
-        self.ssname = subsys.name
+        # self.ssname = subsys.name
 
 # ------------------------------------------------------------------------ #
 @block

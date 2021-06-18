@@ -85,7 +85,6 @@ esp32: .build-flags/esp32
 			export BOARD=GENERIC && \
 			export FROZEN_MANIFEST_INCLUDE=$$(pwd)/boards/manifest.py && \
 			\
-			$(make) submodules && \
 			$(make) all
 	touch $@
 
@@ -125,6 +124,7 @@ esp32-repl: .build-flags/esp32-deployed
 # and then frozen as c code so that the libraries are stored in ROM
 UBDSIM_PY_SRC=$(shell find -L src/bdsim -name '*.py')
 UBDSIM_RT_PY_SRC=$(shell find -L src/bdsim_realtime -name '*.py')
+UPIP_DEPS=$(shell find -L .upip-deps -name '*.py')
 
 # all the bytecode from ubdsim and ubdsim_realtime
 dist: _src-code _mpy-cross
@@ -142,7 +142,7 @@ dist: _src-code _mpy-cross
 	cd firmware/bytecode && \
 		python3 setup.py sdist
 
-.build-flags/src-code: $(UBDSIM_PY_SRC) $(UBDSIM_RT_PY_SRC)
+.build-flags/src-code: $(UBDSIM_PY_SRC) $(UBDSIM_RT_PY_SRC) $(UPIP_DEPS)
 	touch $@
 
 # cross-compiled micropython bytecode

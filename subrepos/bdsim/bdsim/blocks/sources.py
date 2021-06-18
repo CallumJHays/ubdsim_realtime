@@ -208,12 +208,12 @@ class WaveForm(SourceBlock):
             return # I guess this is right ???
 
         # t1 < t2
-        T = 1.0 / self.freq
-        while t1 < self.bd.simstate.T:
-            self.bd.simstate.declare_event(self, t1)
-            self.bd.simstate.declare_event(self, t2)
-            t1 += T
-            t2 += T
+        # T = 1.0 / self.freq
+        # while t1 < self.bd.simstate.T:
+        #     self.bd.simstate.declare_event(self, t1)
+        #     self.bd.simstate.declare_event(self, t2)
+        #     t1 += T
+        #     t2 += T
 
     def output(self, t=None):
         T = 1.0 / self.freq
@@ -286,9 +286,9 @@ class Piecewise(SourceBlock):
         self.y = [ x[1] for x in seq]
         self.type = "piecewise"
 
-    def start(self):
-        for t in self.t:
-            self.bd.simstate.declare_event(self, t)
+    # def start(self):
+    #     for t in self.t:
+    #         self.bd.simstate.declare_event(self, t)
 
     def output(self, t):
         i = sum([ 1 if t >= _t else 0  for _t in self.t]) - 1
@@ -342,8 +342,8 @@ class Step(SourceBlock):
         self.on = on
         self.type = "step"
 
-    def start(self):
-        self.bd.simstate.declare_event(self, self.T)
+    # def start(self):
+    #     self.bd.simstate.declare_event(self, self.T)
 
     def output(self, t=None):
         if t >= self.T:
@@ -398,8 +398,8 @@ class Ramp(SourceBlock):
         self.slope = slope
         self.type = "ramp"
 
-    def start(self):
-        self.bd.simstate.declare_event(self, self.T)
+    # def start(self):
+    #     self.bd.simstate.declare_event(self, self.T)
 
     def output(self, t=None):
         if t >= self.T:

@@ -1,19 +1,24 @@
 
-from typing import Optional, Union
+from typing import Union
 
-from bdsim import BlockDiagram, Block, Plug
+from bdsim import BlockDiagram, Block, Plug, simulation_only
 from bdsim.components import Clock
 import bdsim_realtime
+from micropython import const
 
 bd = BlockDiagram()
 
 Signal = Union[Block, Plug]
 
-ADC_PIN = 0
-PWM_PIN = 0
+ADC_PIN = const(36)
+PWM_PIN = const(23)
 GPIO_V = 3.3
 
-FREQ = 50
+FREQ = 1
+ADC_OFFSET          = 0 / FREQ / 3
+CONTROLLER_OFFSET   = 1 / FREQ / 3
+PWM_OFFSET          = 2 / FREQ / 3
+
 R = 4.7e3
 L = 100e-3
 C = 100e-6
@@ -21,20 +26,15 @@ C = 100e-6
 
 def vc_rlc(V_s: Signal, r: float, l: float, c: float):
     "Transfer function for voltage across a capacitor in an RLC circuit"
-
-    A, B, C, _ = tf2ss(1, [l * c, r * c, 1])
-    # full_state_feedback = np.eye()
-    return bd.LTI_SS(V_s, A=A, B=B, C=C)
+    return bd.LTI_SISO(1, [l * c, r * c, 1], V_s)
 
 def discrete_pi_controller(clock: Clock, p: float, i: float, *, min: float = -float('inf'), max=float('inf')):
     "Discrete PI Controller"
     p_term = bd.GAIN(p)
-
-    ss_pi = TransferFunction(clock.T * i, [1, -1], dt=clock.T).to_ss()
-    i_term = bd.DISCRETE_LTI_SS(clock, A=ss_pi.A, B=ss_pi.B, C=ss_pi.C)
+    i_term = bd.DINTEGRATOR(clock)
 
     block = bd.CLIP(
-        bd.SUM('++', p_term, i_term),
+        bd.SUM('++', p_term, bd.GAIN(i, i_term)),
         min=min, max=max
     )
 
@@ -47,34 +47,41 @@ def discrete_pi_controller(clock: Clock, p: float, i: float, *, min: float = -fl
 
 
 def control_rlc(reference: Signal):
-    clock = bd.clock(FREQ, unit='Hz')
+    "Use A PI Controller to try and track the input reference signal with the voltage over the capacitor"
 
-    duty, register_err = discrete_pi_controller(clock, 20, 1, min=0, max=1)
+    adc = bd.ADC_ESP32(
+        bd.clock(FREQ, offset=ADC_OFFSET, unit='Hz'),
+        bit_width=12, v_max=3.6, pin=ADC_PIN)
+
+    duty, register_err = discrete_pi_controller(
+        bd.clock(FREQ, offset=CONTROLLER_OFFSET, unit='Hz'),
+        20, 1, min=0, max=1)
 
     # max frequency allowable by ESP32 for smoothest output
-    pwm_v = bd.PWM(clock, duty, freq=1000, v_range=(0, 3.3), pin=PWM_PIN)
+    pwm_v = bd.PWM_ESP32(
+        bd.clock(FREQ, offset=PWM_OFFSET, unit='Hz'),
+        duty, freq=1000, v_on=3.3, pin=PWM_PIN)
 
-    V_c = vc_rlc(pwm_v, R, L, C)
-
-    adc = bd.ADC(clock, V_c, bit_width=12, v_range=(0, 3.6), pin=ADC_PIN)
+    # with simulation_only:
+    #     V_c = vc_rlc(pwm_v, R, L, C)
 
     err = bd.SUM('+-', reference, adc)
     register_err(err)
 
-    return duty, adc, V_c
+    return duty, adc
 
 
 
 target = bd.STEP(T=0)
 # target = bd.WAVEFORM('sine')
 
-inp, adc, output = control_rlc(target)
-scope = bd.SCOPE(
-    labels=["Reference", "PWM", "ADC Reading", "Output"]
-)
-scope[0] = target
-scope[1] = inp
-scope[2] = adc
-scope[3] = output
+inp, adc = control_rlc(target)
+# scope = bd.SCOPE(
+#     labels=["Reference", "PWM", "ADC Reading", "Output"]
+# )
+# scope[0] = target
+# scope[1] = inp
+# scope[2] = adc
+# scope[3] = output
 
 bdsim_realtime.run(bd, 5)

@@ -3,6 +3,9 @@ from typing import List, Tuple, Union
 if 'TYPE_CHECKING' not in dir(typing):
     typing.TYPE_CHECKING = False
 
+
+_int, _float, _bool = int, float, bool
+
 if typing.TYPE_CHECKING:
     import ulab as np
 else:
@@ -16,8 +19,8 @@ else:
     for attr in dir(np):
         setattr(mod, attr, getattr(np, attr))
 
-_DType = int
-_RClassKeyType = Union[slice, int, float, list, tuple, np.ndarray]
+_DType = _int
+_RClassKeyType = Union[slice, _int, _float, list, tuple, np.ndarray]
 
 # this is a stripped down version of RClass (used by np.r_[...etc])
 # it doesn't include support for string arguments as the first index element
@@ -29,7 +32,7 @@ class RClass:
             key = (key,)
 
         objs: List[np.ndarray] = []
-        scalars: List[int] = []
+        scalars: List[_int] = []
         arraytypes: List[_DType] = []
         scalartypes: List[_DType] = []
 
@@ -52,13 +55,13 @@ class RClass:
                     if step is None:
                         step = 1
                     if isinstance(step, complex):
-                        size = int(abs(step))
+                        size = _int(abs(step))
                         newobj: np.ndarray = np.linspace(start, stop, num=size)
                     else:
                         newobj = np.arange(start, stop, step)
 
                 # if is number
-                elif isinstance(item, (int, float, bool)):
+                elif isinstance(item, (_int, _float, _bool)):
                     newobj = np.array([item])
                     scalars.append(len(objs))
                     scalar = True
@@ -66,7 +69,7 @@ class RClass:
                     
                 else:
                     newobj = np.array(item)
-                    
+                
             except TypeError:
                 raise Exception("index object %s of type %s is not supported by r_[]" % (
                     str(item), type(item)))

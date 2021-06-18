@@ -31,23 +31,26 @@ class ADC(ZOH):
     def __init__(
         self,
         clock: Clock,
-        inp: Optional[Union[Block, Plug]],
+        inp: Optional[Union[Block, Plug]] = None,
         *,
         bit_width: int,
-        v_range: Tuple[float, float],
+        v_max: float,
+        v_min: float = 0,
+        pin: Optional[int] = None,
         **kwargs: Any
     ):
         super().__init__(clock, *(inp,) if inp else (), **kwargs)
-        self.v_range = v_range
+        self.v_min = v_min
+        self.v_max = v_max
+        self.v_range = v_max - v_min
         self.quant_n_idxs = 2 ** bit_width - 1
-        min_, max_ = self.v_range
-        self.quant_step_size = (max_ - min_) / self.quant_n_idxs
+        self.quant_step_size = (v_max - v_min) / self.quant_n_idxs
 
     def next(self):
         inp: float = self.inputs[0]  # type: ignore
 
         res = None
-        min_, max_ = self.v_range
+        min_, max_ = self.v_min, self.v_max
         if inp < min_:
             res = min_
         elif inp > max_:
@@ -71,34 +74,35 @@ class PWM(ClockedBlock):
         duty_cycle: Optional[Union[Block, Plug]] = None,
         *,
         freq: int,
-        v_range: Tuple[float, float],
+        v_on: float,
+        v_off: float = 0,
         duty0: int = 0,
         approximate: bool = True,
+        pin: Optional[int] = None,
         **kwargs: Any
     ):
         super().__init__(clock, nin=1, nout=1,  # type: ignore
                          inputs=(duty_cycle,) if duty_cycle else (), **kwargs)
         self.type = "pwm"
         self.times: Optional[tuple[float, float]] = None  # (last, next)
-        self.duty: float = 0
         self.T = 1 / freq
 
         # TODO: simulate slew rate
         # TODO: x0 represents offset? maybe a (last, next) tuple?
-        self._x0 = [duty0]  # I don't like this
+        self._x0 = np.array([duty0])  # I don't like this
         self.ndstates = 1
-        self.v_range = v_range
+        self.v_on = v_on
+        self.v_off = v_off
         self.approximate = approximate
 
     def output(self, t: float):
         duty = self._x[0]
-        v_off, v_on = self.v_range
         if self.approximate:
-            return [duty * (v_on - v_off) + v_off]
+            return [duty * (self.v_on - self.v_off) + self.v_off]
         else:
             t_cycle = t % self.T
             t_on = duty * self.T
-            return [v_on if t_cycle <= t_on else v_off]
+            return [self.v_on if t_cycle <= t_on else self.v_off]
 
     def next(self):
         return np.array(self.inputs)

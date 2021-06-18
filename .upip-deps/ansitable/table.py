@@ -200,11 +200,11 @@ class ANSIMatrix:
 
         import numpy as np  # only import if matrix is used
 
-        if len(matrix.shape) == 1:
-            ncols = matrix.shape[0]
+        if len(matrix.shape()) == 1:
+            ncols = matrix.shape()[0]
             matrix = matrix.reshape((1, -1))
-        elif len(matrix.shape) == 2:
-            ncols = matrix.shape[1]
+        elif len(matrix.shape()) == 2:
+            ncols = matrix.shape()[1]
         else:
             raise ValueError('Only 1D and 2D arrays supported')
 

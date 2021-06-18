@@ -49,11 +49,6 @@ import datetime
 import sys
 import io
 
-if sys.version_info[0:2] >= (3, 3):
-    from collections.abc import Hashable
-else:
-    from collections import Hashable
-
 __version__ = "2.7.1"
 "Module version string"
 
@@ -325,12 +320,7 @@ def _pack_boolean(obj, fp, options):
 def _pack_float(obj, fp, options):
     float_precision = options.get('force_float_precision', _float_precision)
 
-    if float_precision == "double":
-        fp.write(b"\xcb" + struct.pack(">d", obj))
-    elif float_precision == "single":
-        fp.write(b"\xca" + struct.pack(">f", obj))
-    else:
-        raise ValueError("invalid float precision")
+    fp.write(b"\xca" + struct.pack(">f", obj))
 
 
 def _pack_string(obj, fp, options):
@@ -914,9 +904,9 @@ def _unpack_map(code, fp, options):
         if isinstance(k, list):
             # Attempt to convert list into a hashable tuple
             k = _deep_list_to_tuple(k)
-        elif not isinstance(k, Hashable):
-            raise UnhashableKeyException(
-                "encountered unhashable key: \"{:s}\" ({:s})".format(str(k), str(type(k))))
+        # elif not isinstance(k, Hashable):
+        #     raise UnhashableKeyException(
+        #         "encountered unhashable key: \"{:s}\" ({:s})".format(str(k), str(type(k))))
         elif k in d:
             raise DuplicateKeyException(
                 "encountered duplicate key: \"{:s}\" ({:s})".format(str(k), str(type(k))))
@@ -1147,7 +1137,6 @@ def __init():
     global compatibility
     global _epoch
     global _utc_tzinfo
-    global _float_precision
     global _unpack_dispatch_table
     global xrange
 
@@ -1173,12 +1162,6 @@ def __init():
 
     # Calculate an aware epoch datetime
     _epoch = datetime.datetime(1970, 1, 1, tzinfo=_utc_tzinfo)
-
-    # Auto-detect system float precision
-    if sys.float_info.mant_dig == 53:
-        _float_precision = "double"
-    else:
-        _float_precision = "single"
 
     # Map packb and unpackb to the appropriate version
     if sys.version_info[0] == 3:

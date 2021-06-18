@@ -14,3 +14,19 @@ opt_level(3)
 # needed for helpful exceptions?
 # https://docs.micropython.org/en/latest/library/micropython.html?highlight=schedule#micropython.alloc_emergency_exception_buf
 alloc_emergency_exception_buf(100)
+
+# change these to your wifi details
+WIFI_SSID = "TelstraDEA059"
+WIFI_PASSWORD = "wr5ncwt798"
+
+import network
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+print('connecting to network', WIFI_SSID, 'with password', WIFI_PASSWORD[0:3] + "*" * len(WIFI_PASSWORD[3:]))
+if not wlan.isconnected():
+    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    while not wlan.isconnected():
+        print('connecting failed. trying again...')
+        print('available wifi networks are', [str(n[0]) for n in wlan.scan()])
+        pass
+print('network config:', wlan.ifconfig())

@@ -72,7 +72,7 @@ class Struct(dict):
                     s += fmt(k, v, indent + 1)
                 return s
             elif isinstance(v, np.ndarray):
-                s = '            > ' * indent + '{:12s}| {:12s}\n'.format(k, type(v).__name__ + ' ' + str(v.shape))
+                s = '            > ' * indent + '{:12s}| {:12s}\n'.format(k, type(v).__name__ + ' ' + str(v.shape()))
             else:
                 s = '            > ' * indent + '{:12s}| {:12s}\n'.format(k, type(v).__name__)
             return s
@@ -454,11 +454,8 @@ class Clock:
 
     def getstate0(self):
         # get the state from each stateful block on this clock
-        x0 = np.zeros(0)
-        for b in self.blocklist:
-            x0 = np.r_[x0, b.getstate0()]
-            #print('x0', x0)
-        return x0
+        parts = tuple(b.getstate0() for b in self.blocklist)
+        return np.concatenate(parts) if parts else np.zeros(0)
 
     def getstate(self):
 
@@ -472,15 +469,7 @@ class Clock:
     def setstate(self):
         x = self._x
         for b in self.blocklist:
-            x = b.setstate(x)  # send it to blocks        
-
-    def start(self):
-        self.bd.state.declare_event(self, self.time(self.tick))
-        self.tick += 1
-
-    def next_event(self):
-        self.bd.state.declare_event(self, self.time(self.tick))
-        self.tick += 1
+            x = b.setstate(x)  # send it to blocks
 
     def time(self, i):
         # return (math.floor((t - self.offset) / self.T) + 1) * self.T + self.offset
@@ -597,12 +586,11 @@ class Block:
         self.out = []
         self.inputs = None
         self.updated = False
-        self.shape = 'block'  # for box
         self._inport_names = None
         self._outport_names = None
         self._state_names = None
         self.initd = True
-        self._sim_only = mark_sim_only
+        self.sim_only = mark_sim_only
 
         if nin is not None:
             self.nin = nin
