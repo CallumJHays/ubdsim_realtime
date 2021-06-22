@@ -5,8 +5,8 @@
 ;
 [subrepo]
 	remote = git@github.com:CallumJHays/bdsim_realtime.git
-	branch = main
-	commit = 9ce0381019880d804586f223390b9746fc48dae2
-	parent = b31d225ee97d75f468f1a57c4a4e19a845339efa
+	branch = exec-order
+	commit = 862274d79ef1fccb89c422d905faa7e075982d6e
+	parent = c804e41a1f8b173b6088927d2da15a9bacf3a289
 	method = merge
 	cmdver = 0.4.3
