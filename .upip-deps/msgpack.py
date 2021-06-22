@@ -318,8 +318,6 @@ def _pack_boolean(obj, fp, options):
 
 
 def _pack_float(obj, fp, options):
-    float_precision = options.get('force_float_precision', _float_precision)
-
     fp.write(b"\xca" + struct.pack(">f", obj))
 
 

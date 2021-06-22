@@ -12,8 +12,10 @@ Function blocks:
 import numpy as np
 import math
 
-from ..components import FunctionBlock, block
+import micropython
 
+from ..components import FunctionBlock, block
+from ..profiling import timed
 
 # PID
 # product
@@ -86,27 +88,24 @@ class Sum(FunctionBlock):
         self.signs = signs
         self.angles = angles
         
-        
+    
+    # @timed
+    @micropython.native
     def output(self, t=None):
-
-
-        for i,input in enumerate(self.inputs):
-            # in ulab, __radd__ hasn't been implemented for np.ndarray with regular numbers
-            # so we normalize all inputs to be numpy arrays
-            if not isinstance(input, np.ndarray):
-                input = np.ndarray([input])
-
-            if self.signs[i] == '-':
-                input = -input
-            if i == 0:
-                sum = input
-            else:
-                sum = sum + input
+        sum = 0
         
+        for sign, inp in zip(self.signs, self,inputs):
+            if sign == '-':
+                sum -= inp
+            else:
+                sum += inp
+            
         if self.angles:
             sum = np.mod(sum + math.pi, 2 * math.pi) - math.pi
 
-        return [sum]
+        return sum
+        
+
 
 # ------------------------------------------------------------------------ #
 @block
@@ -260,20 +259,27 @@ class Gain(FunctionBlock):
         self.K  = K
         self.type = 'gain'
         self.premul = premul
-        
+    
+    # @timed
+    @micropython.native
     def output(self, t=None):
-        input = self.inputs[0]
+        inp = self.inputs[0]
+
+        # unwrap because single numbers are faster than numpy signles
+        while isinstance(inp, np.ndarray):
+            # assert len(inp) == 1
+            inp = inp[0]
         
-        if isinstance(input, np.ndarray) and isinstance(self.K, np.ndarray):
+        if isinstance(inp, np.ndarray) and isinstance(self.K, np.ndarray):
             # array x array case
             if self.premul:
                 # premultiply by gain
-                return [self.K @ input]
+                return [self.K @ inp]
             else:
                 # postmultiply by gain
-                return [input @ self.K]
+                return [inp @ self.K]
         else:
-            return [self.inputs[0] * self.K]
+            return [inp * self.K]
         
 # ------------------------------------------------------------------------ #
 
@@ -337,15 +343,13 @@ class Clip(FunctionBlock):
         self.min = min
         self.max = max
         self.type = 'clip'
-        
+        self.out = [None]
+    
+    # @timed
+    @micropython.native
     def output(self, t=None):
-        input = self.inputs[0]
-        
-        if isinstance(input, np.ndarray):
-            out = np.clip(input, self.min, self.max)
-        else:
-            out = min(self.max, max(input, self.min))
-        return [ out ]
+        self.out[0] = np.clip(self.inputs[0], self.min, self.max)
+        return self.out
 # ------------------------------------------------------------------------ #
 
 # TODO can have multiple outputs: pass in a tuple of functions, return a tuple

@@ -19,14 +19,15 @@ alloc_emergency_exception_buf(100)
 WIFI_SSID = "TelstraDEA059"
 WIFI_PASSWORD = "wr5ncwt798"
 
-import network
+import network, utime
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 print('connecting to network', WIFI_SSID, 'with password', WIFI_PASSWORD[0:3] + "*" * len(WIFI_PASSWORD[3:]))
 if not wlan.isconnected():
     wlan.connect(WIFI_SSID, WIFI_PASSWORD)
     while not wlan.isconnected():
-        print('connecting failed. trying again...')
+        print('connecting failed. trying again in 1 second...')
+        utime.sleep(1)
         print('available wifi networks are', [str(n[0]) for n in wlan.scan()])
         pass
-print('network config:', wlan.ifconfig())
+print('Connected to Wifi Successfully! network config:', wlan.ifconfig())

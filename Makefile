@@ -114,7 +114,7 @@ esp32-run-example-%: .build-flags/esp32-deployed
 		cp examples/boot.py /pyboard/; \
 		cp examples/$*.py /pyboard/; \
 		cd /pyboard; \
-		repl ~ import $*"
+		repl ~ from $* import run, run_default ~ run_default()"
 
 esp32-repl: .build-flags/esp32-deployed
 	rshell -p /dev/ttyUSB0 "cd /pyboard; repl"

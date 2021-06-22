@@ -225,14 +225,14 @@ class BlockDiagram:
         #     print('  importing subsystem', b.name)
         #     if b.ssvar is not None:
         #         print('-- Wiring in subsystem', b, 'from module local variable ', b.ssvar)
-        self.blocklist, self.wirelist = self._subsystem_import(self, None)
+        # self.blocklist, self.wirelist = self._subsystem_import(self, None)
 
         # check that wires all point to valid blocks
-        for w in self.wirelist:
-            if w.start.block not in self.blocklist:
-                raise RuntimeError("wire {w} starts at unreferenced block {}".format(w.start.block))
-            if w.end.block not in self.blocklist:
-                raise RuntimeError("wire {w} ends at unreferenced block {}".format(w.end.block))
+        # for w in self.wirelist:
+        #     if w.start.block not in self.blocklist:
+        #         raise RuntimeError("wire {w} starts at unreferenced block {}".format(w.start.block))
+        #     if w.end.block not in self.blocklist:
+        #         raise RuntimeError("wire {w} ends at unreferenced block {}".format(w.end.block))
 
         # run block specific checks
         for b in self.blocklist:
@@ -274,69 +274,69 @@ class BlockDiagram:
             w.end.block._parents[w.end.port] = w.start.block
             
         # check connections every block 
-        for b in self.blocklist:
-            # check all inputs are connected
-            for port, connection in enumerate(b.inports):
-                if connection is None:
-                    print('  ERROR: block {:s} input {:d} is not connected'.format(str(b), port))
-                    error = True
+        # for b in self.blocklist:
+        #     # check all inputs are connected
+        #     for port, connection in enumerate(b.inports):
+        #         if connection is None:
+        #             print('  ERROR: block {:s} input {:d} is not connected'.format(str(b), port))
+        #             error = True
                     
-            # check all outputs are connected
-            for port,connections in enumerate(b.outports):
-                if len(connections) == 0:
-                    print('  INFORMATION: block {:s} output {:d} is not connected'.format(str(b), port))
+        #     # check all outputs are connected
+        #     for port,connections in enumerate(b.outports):
+        #         if len(connections) == 0:
+        #             print('  INFORMATION: block {:s} output {:d} is not connected'.format(str(b), port))
                     
-            if b._inport_names is not None:
-                assert len(b._inport_names) == b.nin, 'incorrect number of input names given: ' + str(b)
-            if b._outport_names is not None:
-                assert len(b._outport_names) == b.nout, 'incorrect number of output names given: ' + str(b)
-            if b._state_names is not None:
-                assert len(b._state_names) == b.nstates, 'incorrect number of state names given: ' + str(b)
+        #     if b._inport_names is not None:
+        #         assert len(b._inport_names) == b.nin, 'incorrect number of input names given: ' + str(b)
+        #     if b._outport_names is not None:
+        #         assert len(b._outport_names) == b.nout, 'incorrect number of output names given: ' + str(b)
+        #     if b._state_names is not None:
+        #         assert len(b._state_names) == b.nstates, 'incorrect number of state names given: ' + str(b)
                     
-        # check for cycles of function blocks
-        def _DFS(path):
-            start = path[0]
-            tail = path[-1]
-            for outgoing in tail.outports:
-                # for every port on this block
-                for w in outgoing:
-                    dest = w.end.block
-                    if dest == start:
-                        print('  ERROR: cycle found: ', ' - '.join([str(x) for x in path + [dest]]))
-                        return True
-                    if dest.blockclass == 'function':
-                        return _DFS(path + [dest]) # recurse
-            return False
+        # # check for cycles of function blocks
+        # def _DFS(path):
+        #     start = path[0]
+        #     tail = path[-1]
+        #     for outgoing in tail.outports:
+        #         # for every port on this block
+        #         for w in outgoing:
+        #             dest = w.end.block
+        #             if dest == start:
+        #                 print('  ERROR: cycle found: ', ' - '.join([str(x) for x in path + [dest]]))
+        #                 return True
+        #             if dest.blockclass == 'function':
+        #                 return _DFS(path + [dest]) # recurse
+        #     return False
 
-        for b in self.blocklist:
-            if b.blockclass == 'function':
-                # do depth first search looking for a cycle
-                if _DFS([b]):
-                    error = True
+        # for b in self.blocklist:
+        #     if b.blockclass == 'function':
+        #         # do depth first search looking for a cycle
+        #         if _DFS([b]):
+        #             error = True
 
-        if error:
-            if not subsystem:
-                raise RuntimeError('could not compile system')
+        # if error:
+        #     if not subsystem:
+        #         raise RuntimeError('could not compile system')
 
-        # create the execution plan/schedule
-        self.execution_plan()
+        # # create the execution plan/schedule
+        # self.execution_plan()
 
-        # evaluate the network once to check out wire types
-        x = self.getstate0()
+        # # evaluate the network once to check out wire types
+        # x = self.getstate0()
 
-        for clock in self.clocklist:
-            clock._x = clock.getstate0()
+        # # for clock in self.clocklist:
+        # #     clock._x = clock.getstate0()
 
-        if report:
-            self.report()
-            self.plan_print()
+        # if report:
+        #     self.report()
+        #     self.plan_print()
 
-        if not subsystem:
-            try:
-                self.evaluate_plan(x, 0.0, sinks=False)
-            except RuntimeError as err:
-                print('\nFrom compile: unrecoverable error in value propagation:', err)
-                error = True
+        # if not subsystem:
+        #     try:
+        #         self.evaluate_plan(x, 0.0, sinks=False)
+        #     except RuntimeError as err:
+        #         print('\nFrom compile: unrecoverable error in value propagation:', err)
+        #         error = True
             
         if error:
             if not subsystem:

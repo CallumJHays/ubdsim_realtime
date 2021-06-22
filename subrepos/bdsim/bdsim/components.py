@@ -156,7 +156,6 @@ class Wire:
         self.end = end
         self.value = None
         self.type = None
-        self.name = None
 
     @property
     def info(self):
@@ -453,23 +452,22 @@ class Clock:
         return s
 
     def getstate0(self):
-        # get the state from each stateful block on this clock
-        parts = tuple(b.getstate0() for b in self.blocklist)
-        return np.concatenate(parts) if parts else np.zeros(0)
+        return None # don't care - this is useless
 
     def getstate(self):
+        # x = np.zeros(0)
+        # for b in self.blocklist:
+        #     # update dstate
+        #     x = np.r_[x, b.next().flatten()]
 
-        x = np.zeros(0)
-        for b in self.blocklist:
-            # update dstate
-            x = np.r_[x, b.next().flatten()]
-
-        return x
+        # return x
+        return None
 
     def setstate(self):
-        x = self._x
-        for b in self.blocklist:
-            x = b.setstate(x)  # send it to blocks
+        # x = self._x
+        # for b in self.blocklist:
+        #     x = b.setstate(x)  # send it to blocks
+        return None
 
     def time(self, i):
         # return (math.floor((t - self.offset) / self.T) + 1) * self.T + self.offset
@@ -999,6 +997,7 @@ class TransferBlock(Block):
     def __init__(self, **kwargs):
         # print('Transfer constructor')
         super().__init__(**kwargs)
+        self._x = self._x0
 
     def reset(self):
         super().reset()
@@ -1010,8 +1009,8 @@ class TransferBlock(Block):
         self._x = x[:self.nstates]  # take as much state vector as we need
         return x[self.nstates:]     # return the rest
 
-    def getstate0(self):
-        return self._x0
+    # def getstate0(self):
+    #     return self._x0
 
     def check(self):
         assert len(self._x0) == self.nstates, 'incorrect length for initial state'
@@ -1067,19 +1066,23 @@ class ClockedBlock(Block):
         # return self._x
 
     def setstate(self, x):
-        self._x = x[:self.ndstates]  # take as much state vector as we need
-        # print('** set block state to ', self._x)
-        return x[self.ndstates:]     # return the rest
+        # self._x = x[:self.ndstates]  # take as much state vector as we need
+        # # print('** set block state to ', self._x)
+        # return x[self.ndstates:]     # return the rest
+        return None
 
     def getstate0(self):
         return self._x0
 
     def check(self):
-        assert len(self._x0) == self.ndstates, 'incorrect length for initial state'
+        pass
+        # assert len(self._x0) == self.ndstates, 'incorrect length for initial state'
 
-        assert self.nin > 0 or self.nout > 0, 'no inputs or outputs specified'
-        self._x = self._x0
+        # assert self.nin > 0 or self.nout > 0, 'no inputs or outputs specified'
+        # self._x = self._x0
 
+    def tick(self, dt: float) -> None:
+        raise NotImplementedError()
 
 
 # c = Clock(5)

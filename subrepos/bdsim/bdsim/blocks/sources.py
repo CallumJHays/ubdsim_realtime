@@ -9,11 +9,13 @@ Source blocks:
 # The constructor of each class ``MyClass`` with a ``@block`` decorator becomes a method ``MYCLASS()`` of the BlockDiagram instance.
 
 
-import numpy as np
 import math
 
-from ..components import SourceBlock, block
+import numpy as np
+import micropython
 
+from ..components import SourceBlock, block
+from ..profiling import timed
 
 # ------------------------------------------------------------------------ #
 @block
@@ -215,6 +217,8 @@ class WaveForm(SourceBlock):
         #     t1 += T
         #     t2 += T
 
+    # @timed
+    @micropython.native
     def output(self, t=None):
         T = 1.0 / self.freq
         phase = (t * self.freq - self.phase ) % 1.0
@@ -345,6 +349,8 @@ class Step(SourceBlock):
     # def start(self):
     #     self.bd.simstate.declare_event(self, self.T)
 
+    # @timed
+    @micropython.native
     def output(self, t=None):
         if t >= self.T:
             out = self.on

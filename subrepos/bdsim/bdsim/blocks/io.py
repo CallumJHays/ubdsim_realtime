@@ -46,7 +46,7 @@ class ADC(ZOH):
         self.quant_n_idxs = 2 ** bit_width - 1
         self.quant_step_size = (v_max - v_min) / self.quant_n_idxs
 
-    def next(self):
+    def tick(self, dt: float):
         inp: float = self.inputs[0]  # type: ignore
 
         res = None
@@ -59,7 +59,7 @@ class ADC(ZOH):
             # adc quantization
             step_idx = round((inp - min_) / self.quant_step_size)
             res = step_idx * self.quant_step_size + min_
-        return np.array(res)
+        return res
 
 
 @block
@@ -89,20 +89,19 @@ class PWM(ClockedBlock):
 
         # TODO: simulate slew rate
         # TODO: x0 represents offset? maybe a (last, next) tuple?
-        self._x0 = np.array([duty0])  # I don't like this
+        self._x = duty0
         self.ndstates = 1
         self.v_on = v_on
         self.v_off = v_off
         self.approximate = approximate
 
     def output(self, t: float):
-        duty = self._x[0]
         if self.approximate:
-            return [duty * (self.v_on - self.v_off) + self.v_off]
+            return [self._x * (self.v_on - self.v_off) + self.v_off]
         else:
             t_cycle = t % self.T
-            t_on = duty * self.T
+            t_on = self._x * self.T
             return [self.v_on if t_cycle <= t_on else self.v_off]
 
-    def next(self):
-        return np.array(self.inputs)
+    def tick(self, dt: float):
+        self._x = self.inputs[0]
